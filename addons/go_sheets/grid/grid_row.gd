@@ -60,10 +60,13 @@ func bind(
 		add_child(lbl)
 		_labels.append(lbl)
 
-	# Populate
+	# Populate — collapsed columns get a hidden label (space reserved by offset)
 	for i in columns.size():
 		var col = columns[i]
 		var lbl: Label = _labels[i]
+		if col.collapsed:
+			lbl.hide()
+			continue
 		lbl.position = Vector2(x_offsets[i] + 4, 0)
 		lbl.size = Vector2(col.width - 8, ROW_HEIGHT)
 		lbl.text = _format_value(resource.get(col.property_name), col.property_type)

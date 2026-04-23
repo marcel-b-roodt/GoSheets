@@ -13,13 +13,18 @@ class_name ResourceGrid
 extends VBoxContainer
 
 signal row_selected(resource: Resource)
+## Emitted after the user drags a resize handle or toggles a column collapse.
+## The panel should respond by persisting the updated ColumnModel.
+signal column_layout_changed
 
 # Self-preload
 const _GRID_ROW_SCRIPT := preload("res://addons/go_sheets/grid/grid_row.gd")
 
 # ── Layout constants ──────────────────────────────────────────────────────────
-const ROW_HEIGHT    := 24
-const HEADER_HEIGHT := 28
+const ROW_HEIGHT      := 24
+const HEADER_HEIGHT   := 28
+const COLLAPSED_WIDTH := 16   # width of a collapsed column strip
+const MIN_COL_WIDTH   := 40   # minimum drag-resize width
 
 ## Set to true (via the panel’s Debug toggle) to print layout diagnostics.
 var debug_mode: bool = false
@@ -32,6 +37,11 @@ var _selected_index: int = -1
 # Sort state
 var _sort_column: int = -1     # index into visible columns
 var _sort_dir: int = 0          # 1 = asc, -1 = desc
+
+# Column resize drag state
+var _drag_col_index: int = -1   # visible-column index being dragged
+var _drag_start_x: float = 0.0  # global mouse x at drag start
+var _drag_start_w: int = 0      # col.width at drag start
 
 # ── UI nodes ─────────────────────────────────────────────────────────────────
 var _scroll: ScrollContainer
@@ -117,32 +127,87 @@ func _compute_column_offsets() -> void:
 	var x := 0
 	for col: ColumnDef in vis:
 		_col_x_offsets.append(x)
-		x += col.width
+		x += COLLAPSED_WIDTH if col.collapsed else col.width
 	_total_width = x
 
 
 func _rebuild_header() -> void:
-	# Remove old header labels
 	for child in _header_bar.get_children():
 		child.queue_free()
 
 	var vis := _column_model.visible_columns()
+	var any_collapsed := false
+	for col: ColumnDef in vis:
+		if col.collapsed:
+			any_collapsed = true
+			break
+
 	for i in vis.size():
 		var col: ColumnDef = vis[i]
-		var btn := Button.new()
-		btn.text = col.display_name
-		btn.flat = true
-		btn.size = Vector2(col.width, HEADER_HEIGHT)
-		btn.position = Vector2(_col_x_offsets[i], 0)
-		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		btn.add_theme_color_override("font_color", Color.WHITE)
-		var sort_suffix := ""
-		if _sort_column == i:
-			sort_suffix = " ▲" if _sort_dir == 1 else " ▼"
-		btn.text = col.display_name + sort_suffix
-		var col_idx := i   # capture for closure
-		btn.pressed.connect(func() -> void: _on_header_clicked(col_idx))
-		_header_bar.add_child(btn)
+		var eff_w: int = COLLAPSED_WIDTH if col.collapsed else col.width
+
+		if col.collapsed:
+			# Collapsed strip: just a narrow button with tooltip + expand icon.
+			var strip := Button.new()
+			strip.flat = true
+			strip.text = "▶"
+			strip.tooltip_text = col.display_name
+			strip.position = Vector2(_col_x_offsets[i], 0)
+			strip.size = Vector2(COLLAPSED_WIDTH, HEADER_HEIGHT)
+			strip.clip_text = true
+			var col_idx := i
+			strip.pressed.connect(func() -> void: _on_col_expand(col_idx))
+			_header_bar.add_child(strip)
+		else:
+			# Normal column: sort button + collapse chevron + resize handle.
+			var sort_suffix := ""
+			if _sort_column == i:
+				sort_suffix = " ▲" if _sort_dir == 1 else " ▼"
+
+			var btn := Button.new()
+			btn.flat = true
+			# Leave room on the right for the collapse chevron (16px).
+			btn.size = Vector2(eff_w - 16, HEADER_HEIGHT)
+			btn.position = Vector2(_col_x_offsets[i], 0)
+			btn.text = col.display_name + sort_suffix
+			btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			btn.clip_text = true
+			var col_idx := i
+			btn.pressed.connect(func() -> void: _on_header_clicked(col_idx))
+			_header_bar.add_child(btn)
+
+			# Collapse chevron (◄) — sits in the last 16px of the column.
+			var chev := Button.new()
+			chev.flat = true
+			chev.text = "◄"
+			chev.tooltip_text = "Collapse \'%s\'" % col.display_name
+			chev.size = Vector2(16, HEADER_HEIGHT)
+			chev.position = Vector2(_col_x_offsets[i] + eff_w - 16, 0)
+			chev.pressed.connect(func() -> void: _on_col_collapse(col_idx))
+			_header_bar.add_child(chev)
+
+			# Resize drag handle — a thin strip at the right edge.
+			var handle := Control.new()
+			handle.size = Vector2(6, HEADER_HEIGHT)
+			handle.position = Vector2(_col_x_offsets[i] + eff_w - 3, 0)
+			handle.mouse_default_cursor_shape = Control.CURSOR_HSIZE
+			handle.mouse_filter = Control.MOUSE_FILTER_STOP
+			var h_idx := i
+			handle.gui_input.connect(func(ev: InputEvent) -> void:
+				_on_resize_handle_input(ev, h_idx)
+			)
+			_header_bar.add_child(handle)
+
+	# "Expand all" button at the far right when any column is collapsed.
+	if any_collapsed:
+		var expand_all := Button.new()
+		expand_all.flat = false
+		expand_all.text = "⊞"
+		expand_all.tooltip_text = "Expand all columns"
+		expand_all.size = Vector2(28, HEADER_HEIGHT)
+		expand_all.position = Vector2(_total_width + 4, 0)
+		expand_all.pressed.connect(_on_expand_all)
+		_header_bar.add_child(expand_all)
 
 
 func _populate_rows() -> void:
@@ -204,6 +269,56 @@ func _on_header_clicked(col_index: int) -> void:
 	_selected_index = -1
 	_rebuild_header()
 	_populate_rows()
+
+
+func _on_col_collapse(col_index: int) -> void:
+	var vis := _column_model.visible_columns()
+	if col_index >= vis.size():
+		return
+	vis[col_index].collapsed = true
+	_rebuild()
+	column_layout_changed.emit()
+
+
+func _on_col_expand(col_index: int) -> void:
+	var vis := _column_model.visible_columns()
+	if col_index >= vis.size():
+		return
+	vis[col_index].collapsed = false
+	_rebuild()
+	column_layout_changed.emit()
+
+
+func _on_expand_all() -> void:
+	for col: ColumnDef in _column_model.visible_columns():
+		col.collapsed = false
+	_rebuild()
+	column_layout_changed.emit()
+
+
+func _on_resize_handle_input(event: InputEvent, col_index: int) -> void:
+	if event is InputEventMouseButton:
+		var mbe := event as InputEventMouseButton
+		if mbe.button_index == MOUSE_BUTTON_LEFT:
+			if mbe.pressed:
+				var vis := _column_model.visible_columns()
+				if col_index < vis.size():
+					_drag_col_index = col_index
+					_drag_start_x   = mbe.global_position.x
+					_drag_start_w   = vis[col_index].width
+			else:
+				if _drag_col_index >= 0:
+					_drag_col_index = -1
+					column_layout_changed.emit()
+	elif event is InputEventMouseMotion and _drag_col_index == col_index:
+		var mme := event as InputEventMouseMotion
+		var delta := int(mme.global_position.x - _drag_start_x)
+		var vis := _column_model.visible_columns()
+		if _drag_col_index < vis.size():
+			vis[_drag_col_index].width = maxi(_drag_start_w + delta, MIN_COL_WIDTH)
+			_compute_column_offsets()
+			_rebuild_header()
+			_populate_rows()
 
 
 static func _variant_less(a: Variant, b: Variant) -> bool:

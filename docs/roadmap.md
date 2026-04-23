@@ -31,10 +31,10 @@ y
 | 1.3 | Grid renderer — `GridContainer`-based table with header row and data rows | Virtual/pooled rows for performance (target: 500 rows at 60 fps) |
 | 1.4 | Read-only cell display — render `int`, `float`, `String`, `bool`, `Color`, `Vector2`, `Vector3`, `NodePath`, `Resource` reference by type | Appropriate widget per type |
 | 1.5 | Row selection — single and multi-select; syncs with the Godot Inspector | Clicking a row selects the resource in the Inspector |
-| 1.6 | Column visibility toggle — show/hide individual columns; remembered per type | Persistent via Stage 0.4 settings |
+| 1.6 | Column visibility toggle — show/hide individual columns; remembered per type | ✅ Persistent via Stage 0.4 settings |
 | 1.7 | Column reordering — drag to reorder columns; remembered per type | |
-| 1.8 | Sort by column — click header to sort ascending/descending | Stable sort; handles all cell types |
-| 1.9 | Text search / filter bar — filter rows by substring across all visible string columns | Live filter as you type |
+| 1.8 | Sort by column — click header to sort ascending/descending | ✅ Stable sort; handles all cell types |
+| 1.9 | Text search / filter bar — filter rows by substring across all visible string columns | ✅ Debounced live filter |
 
 **Exit criteria:** Developer can open the dock, pick a resource type, see all matching resources in a scrollable table, sort, filter, and single-click to inspect a resource.
 
@@ -46,14 +46,15 @@ Make the grid editable so developers can tweak values without opening the Inspec
 
 | # | Feature | Notes |
 |---|---|---|
-| 2.1 | Inline cell editing — click a cell to edit it in place | `LineEdit`, `SpinBox`, `CheckBox`, `ColorPickerButton` per type |
+| 2.1 | Inline cell editing — click a cell to edit it in place | `LineEdit` for strings; `SpinBox` for int/float; `CheckBox` for bool; `ColorPickerButton` for Color |
 | 2.2 | Undo/redo integration — every cell edit is wrapped in `EditorUndoRedoManager` | |
 | 2.3 | Multi-cell edit — select multiple rows and change a shared property for all of them at once | Batch undo action |
-| 2.4 | Enum support — display `@export_enum` as a dropdown | |
-| 2.5 | Resource reference cells — click to pick/replace a sub-resource or external resource | Opens Godot's standard resource picker |
-| 2.6 | Array property cells — collapsed summary view with expand-to-edit | `Array[int]`, `Array[String]`, etc. |
-| 2.7 | Dirty-state indicator — mark rows/cells with unsaved changes; auto-save on focus loss (configurable) | |
-| 2.8 | Keyboard navigation — Tab/Shift-Tab between cells, Enter to confirm, Escape to cancel | |
+| 2.4 | Enum support — `@export_enum` / `@export` int with `PROPERTY_HINT_ENUM` renders as an `OptionButton` dropdown | Parse `hint_string` to populate items |
+| 2.5 | Resource reference cells — `PROPERTY_HINT_RESOURCE_TYPE` renders as a button; click opens Godot's standard `EditorInterface` resource picker | |
+| 2.6 | Ranged numeric cells — `PROPERTY_HINT_RANGE` int/float renders as a `SpinBox` (min/max/step from hint_string); optional inline slider if space allows | |
+| 2.7 | Array property cells — collapsed summary view with expand-to-edit | `Array[int]`, `Array[String]`, etc. |
+| 2.8 | Dirty-state indicator — mark rows/cells with unsaved changes; auto-save on focus loss (configurable) | |
+| 2.9 | Keyboard navigation — Tab/Shift-Tab between cells, Enter to confirm, Escape to cancel | |
 
 **Exit criteria:** Developer can edit any scalar, enum, or reference property directly in the grid; undo/redo works correctly; multi-select batch edit works.
 
@@ -84,7 +85,8 @@ Fine-grained control over which properties are shown and how.
 |---|---|---|
 | 4.1 | Column picker panel — checkboxes for every available property; grouped by `@export_group` / `@export_subgroup` | |
 | 4.2 | Column pinning — pin 1–N columns to the left (like Excel freeze pane) | Useful for name/id columns |
-| 4.3 | Column width — manual drag resize; double-click to auto-fit | |
+| 4.3 | Column width — manual drag resize; double-click to auto-fit | ✅ Drag handle implemented; double-click auto-fit planned |
+| 4.3a | Column collapse — click ◀ in header to collapse to 16px strip with tooltip; click ▶ to expand; ⊞ to expand all | ✅ |
 | 4.4 | Computed / derived columns — user-defined GDScript expression per column (e.g. `damage * speed`) | Read-only; expression sandbox |
 | 4.5 | Nested resource expansion — expand a `Resource` reference cell to show its own properties as sub-columns | Depth-limited (max 2) |
 | 4.6 | Per-type layout profiles — save named column layouts and switch between them | |

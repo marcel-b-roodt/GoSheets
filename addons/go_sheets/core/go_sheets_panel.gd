@@ -152,6 +152,7 @@ func _build_ui() -> void:
 	_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_grid.debug_mode = _debug_mode
 	_grid.row_selected.connect(_on_row_selected)
+	_grid.column_layout_changed.connect(_on_column_layout_changed)
 	_vbox.add_child(_grid)
 
 	# --- Filter debounce timer ---
@@ -247,6 +248,15 @@ func _on_row_selected(resource: Resource) -> void:
 	if resource == null:
 		return
 	EditorInterface.edit_resource(resource)
+
+
+func _on_column_layout_changed() -> void:
+	if _column_model == null or _settings == null:
+		return
+	var type_key := _settings.last_selected_type
+	_settings.column_layouts[type_key] = _column_model.to_dicts()
+	_settings.save()
+	_dbg("Column layout saved for '%s'" % type_key)
 
 
 func _on_refresh_requested() -> void:

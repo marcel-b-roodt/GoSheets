@@ -18,8 +18,11 @@ var hint_string: String = ""
 var hint: int = PROPERTY_HINT_NONE
 ## Whether the column is currently shown in the grid.
 var visible: bool = true
-## Column width in pixels.
+## Column width in pixels (stored and restored; ignored while collapsed).
 var width: int = 120
+## Whether this column is collapsed to a narrow strip.
+## Collapsed columns show only a resize handle + tooltip; cells are hidden.
+var collapsed: bool = false
 ## Whether this column is pinned to the left.
 var pinned: bool = false
 ## 0 = unsorted, 1 = ascending, -1 = descending.
@@ -48,6 +51,7 @@ func to_dict() -> Dictionary:
 		"hint":          hint,
 		"visible":       visible,
 		"width":         width,
+		"collapsed":     collapsed,
 		"pinned":        pinned,
 		"sort_direction": sort_direction,
 	}
@@ -64,6 +68,7 @@ static func from_dict(d: Dictionary) -> ColumnDef:
 	col.display_name   = d.get("display_name",   col.display_name)
 	col.visible        = d.get("visible",         true)
 	col.width          = d.get("width",           120)
+	col.collapsed      = d.get("collapsed",       false)
 	col.pinned         = d.get("pinned",          false)
 	col.sort_direction = d.get("sort_direction",  0)
 	return col
