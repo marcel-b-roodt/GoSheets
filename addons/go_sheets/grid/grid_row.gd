@@ -91,7 +91,8 @@ static func _format_value(value: Variant, type: Variant.Type) -> String:
 			var f: float = float(value)
 			if abs(f - round(f)) < 0.0001:
 				return str(int(f))
-			return "%.4g" % f
+			# %g is not supported in GDScript; use %f then strip trailing zeros.
+			return ("%.4f" % f).rstrip("0").rstrip(".")
 		TYPE_ARRAY:
 			var arr := value as Array
 			if arr == null:
