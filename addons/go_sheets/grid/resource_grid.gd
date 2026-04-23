@@ -275,7 +275,7 @@ func _col_at(x: float, vis: Array) -> int:
 	return -1
 
 
-func _show_column_context_menu(col_idx: int, global_pos: Vector2) -> void:
+func _show_column_context_menu(col_idx: int, _global_pos: Vector2) -> void:
 	var vis := _column_model.visible_columns()
 	if col_idx >= vis.size():
 		return
@@ -290,8 +290,9 @@ func _show_column_context_menu(col_idx: int, global_pos: Vector2) -> void:
 		_context_menu.add_item("Hide Column", 2)
 	_context_menu.add_separator()
 	_context_menu.add_item("Expand All Hidden", 4)
-	_context_menu.position = Vector2i(global_pos)
-	_context_menu.popup()
+	# Use DisplayServer.mouse_get_position() for correct multi-monitor placement.
+	# global_pos from gui_input is viewport-local; mouse_get_position() is screen-global.
+	_context_menu.popup(Rect2i(DisplayServer.mouse_get_position(), Vector2i.ZERO))
 
 
 func _on_context_menu_id_pressed(id: int) -> void:

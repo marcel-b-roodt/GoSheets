@@ -84,7 +84,7 @@ func bind(
 			continue
 		lbl.position = Vector2(x_offsets[i] + 4, 0)
 		lbl.size = Vector2(col.width - 8, ROW_HEIGHT)
-		lbl.text = _format_value(resource.get(col.property_name), col.property_type)
+		lbl.text = _format_value(resource.get(col.property_name), col)
 		lbl.show()
 
 	# Hide surplus labels
@@ -104,10 +104,20 @@ func bind(
 # Value formatting
 # ---------------------------------------------------------------------------
 
-static func _format_value(value: Variant, type: Variant.Type) -> String:
+static func _format_value(value: Variant, col: ColumnDef) -> String:
 	if value == null:
 		return ""
-	match type:
+	# Resolve enum integer → name using hint_string (e.g. "Fire,Ice,Lightning").
+	if col.hint == PROPERTY_HINT_ENUM and typeof(value) == TYPE_INT:
+		var names := col.hint_string.split(",", false)
+		var idx := int(value)
+		if idx >= 0 and idx < names.size():
+			# Each entry may be "DisplayName:int" — strip the colon suffix.
+			var entry: String = names[idx]
+			var colon := entry.find(":")
+			return entry.left(colon) if colon >= 0 else entry
+		return str(value)
+	match col.property_type:
 		TYPE_BOOL:
 			return "Yes" if bool(value) else "No"
 		TYPE_FLOAT:
