@@ -56,6 +56,12 @@ var _type_map: Dictionary = {}
 ## Per-type resource cache.  Cleared on filesystem_changed.
 ## Key: StringName(type_name)  Value: Array[Resource]
 var _resource_cache: Dictionary = {}
+## EditorUndoRedoManager obtained once in _ready(); used for all cell edits.
+var _undo_redo: EditorUndoRedoManager = null
+## Tracks the last undo_redo history version to detect Inspector-side changes.
+var _last_undo_version: int = -1
+## Timer for polling undo version changes (detects Inspector edits).
+var _sync_timer: Timer = null
 
 
 func _ready() -> void:
@@ -72,6 +78,15 @@ func _ready() -> void:
 	# Connect EditorFileSystem so file additions/deletions auto-refresh the grid.
 	var efs := EditorInterface.get_resource_filesystem()
 	efs.filesystem_changed.connect(_on_filesystem_changed)
+	# Grab undo/redo manager once.
+	_undo_redo = EditorInterface.get_editor_undo_redo()
+	# Poll timer: detect undo/redo or Inspector changes every 300 ms.
+	_sync_timer = Timer.new()
+	_sync_timer.wait_time = 0.3
+	_sync_timer.one_shot = false
+	_sync_timer.timeout.connect(_on_sync_timer)
+	add_child(_sync_timer)
+	_sync_timer.start()
 	_populate_type_selector()
 	# Restore last selection
 	if _settings.last_selected_type != "":
@@ -153,6 +168,7 @@ func _build_ui() -> void:
 	_grid.debug_mode = _debug_mode
 	_grid.row_selected.connect(_on_row_selected)
 	_grid.column_layout_changed.connect(_on_column_layout_changed)
+	_grid.cell_value_changed.connect(_on_cell_value_changed)
 	_vbox.add_child(_grid)
 
 	# --- Filter debounce timer ---
@@ -257,6 +273,72 @@ func _on_column_layout_changed() -> void:
 	_settings.column_layouts[type_key] = _column_model.to_dicts()
 	_settings.save()
 	_dbg("Column layout saved for '%s'" % type_key)
+
+
+## Called when the user commits an inline cell edit in the grid.
+## Wraps the change in an EditorUndoRedoManager action so Ctrl+Z works,
+## writes the new value to the resource, saves it to disk, and refreshes
+## the affected row without rebuilding the whole grid.
+func _on_cell_value_changed(
+		resource: Resource,
+		property: StringName,
+		old_value: Variant,
+		new_value: Variant) -> void:
+	if resource == null or _undo_redo == null:
+		return
+	# No-op if nothing actually changed.
+	if old_value == new_value:
+		return
+
+	var label := "Edit %s.%s" % [resource.get_class(), property]
+	_undo_redo.create_action(label, UndoRedo.MERGE_DISABLE)
+	# do: set new value + save
+	_undo_redo.add_do_property(resource, property, new_value)
+	_undo_redo.add_do_method(self, "_save_and_refresh_resource", resource)
+	# undo: restore old value + save
+	_undo_redo.add_undo_property(resource, property, old_value)
+	_undo_redo.add_undo_method(self, "_save_and_refresh_resource", resource)
+	_undo_redo.commit_action()
+	_dbg("Cell edit: %s.%s  %s → %s" % [resource.get_class(), property, old_value, new_value])
+
+
+## Save [param resource] to disk and refresh its row in the grid.
+## Called as both the do and undo action for cell edits.
+func _save_and_refresh_resource(resource: Resource) -> void:
+	if resource == null:
+		return
+	if resource.resource_path != "":
+		ResourceSaver.save(resource)
+	_refresh_resource_row(resource)
+	# Keep the Inspector in sync with the (possibly undone) state.
+	EditorInterface.edit_resource(resource)
+
+
+## Rebind only the row(s) that display [param resource] without rebuilding
+## the full grid.  Called after save so labels reflect the current value.
+func _refresh_resource_row(resource: Resource) -> void:
+	if _grid == null or _column_model == null:
+		return
+	_grid.refresh_resource(resource)
+
+
+## Polls the undo_redo history version every 300 ms.
+## When the version changes (user pressed Ctrl+Z / Ctrl+Y, or the Inspector
+## committed a change via its own undo history) we rebind all visible rows
+## so the grid stays in sync with the current resource state on disk.
+func _on_sync_timer() -> void:
+	if _undo_redo == null or _grid == null or _column_model == null:
+		return
+	# EditorUndoRedoManager.get_object_history_id(obj) maps objects to their
+	# history bucket.  0 is GLOBAL_HISTORY (used by the Inspector).
+	var ur: UndoRedo = _undo_redo.get_history_undo_redo(0)
+	if ur == null:
+		return
+	var v: int = ur.get_version()
+	if v != _last_undo_version:
+		_last_undo_version = v
+		_grid.refresh_all_rows()
+		_dbg("Undo version changed → grid rows refreshed")
 
 
 func _on_refresh_requested() -> void:

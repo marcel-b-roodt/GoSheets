@@ -16,9 +16,17 @@ signal row_selected(resource: Resource)
 ## Emitted after the user drags a resize handle or toggles a column collapse.
 ## The panel should respond by persisting the updated ColumnModel.
 signal column_layout_changed
+## Emitted when the user commits an inline cell edit.
+## The panel is responsible for undo/redo, ResourceSaver, and row refresh.
+signal cell_value_changed(
+		resource: Resource,
+		property: StringName,
+		old_value: Variant,
+		new_value: Variant)
 
 # Self-preload
-const _GRID_ROW_SCRIPT := preload("res://addons/go_sheets/grid/grid_row.gd")
+const _GRID_ROW_SCRIPT  := preload("res://addons/go_sheets/grid/grid_row.gd")
+const _CELL_EDITOR_SCRIPT := preload("res://addons/go_sheets/grid/cell_editor.gd")
 
 # ── Layout constants ──────────────────────────────────────────────────────────
 const ROW_HEIGHT      := 24
@@ -50,6 +58,7 @@ var _content: VBoxContainer    # auto-sizes from children; drives scroll range
 var _header_bar: Control       # fixed header — single MOUSE_FILTER_STOP, all input centralised
 var _context_menu: PopupMenu   # right-click column menu
 var _context_menu_col: int = -1
+var _cell_editor: CellEditor   # shared popup for inline editing
 
 # ── Column widths (index into visible_columns) ────────────────────────────────
 var _col_x_offsets: Array[int] = []
@@ -89,6 +98,31 @@ func selected_resource() -> Resource:
 	return _resources[_selected_index]
 
 
+## Rebind only the row(s) displaying [param resource] without a full rebuild.
+## Called after a cell edit or undo so the label refreshes immediately.
+func refresh_resource(resource: Resource) -> void:
+	if _column_model == null:
+		return
+	var vis := _column_model.visible_columns()
+	for i in _resources.size():
+		if _resources[i] == resource:
+			var row: GridRow = _content.get_child(i) as GridRow
+			if row != null and row.visible:
+				row.bind(i, resource, vis, _col_x_offsets, i == _selected_index)
+			return
+
+
+## Rebind every visible row — used when undo/redo may have changed any resource.
+func refresh_all_rows() -> void:
+	if _column_model == null:
+		return
+	var vis := _column_model.visible_columns()
+	for i in _resources.size():
+		var row: GridRow = _content.get_child(i) as GridRow
+		if row != null and row.visible:
+			row.bind(i, _resources[i], vis, _col_x_offsets, i == _selected_index)
+
+
 # ---------------------------------------------------------------------------
 # Private — UI construction
 # ---------------------------------------------------------------------------
@@ -122,6 +156,10 @@ func _build_ui() -> void:
 	_context_menu = PopupMenu.new()
 	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
 	add_child(_context_menu)
+
+	_cell_editor = _CELL_EDITOR_SCRIPT.new()
+	_cell_editor.value_committed.connect(_on_cell_value_committed)
+	add_child(_cell_editor)
 
 
 func _rebuild() -> void:
@@ -330,6 +368,7 @@ func _populate_rows() -> void:
 		row.custom_minimum_size = Vector2(0, ROW_HEIGHT)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.row_clicked.connect(_on_row_clicked)
+		row.cell_edit_requested.connect(_on_cell_edit_requested)
 		_content.add_child(row)
 		row._ensure_setup()  # explicit: _ready() may still be deferred
 
@@ -356,6 +395,44 @@ func _on_row_clicked(row_index: int) -> void:
 	_populate_rows()   # re-render to update highlight
 	if row_index >= 0 and row_index < _resources.size():
 		row_selected.emit(_resources[row_index])
+
+
+## Called when the user double-clicks a cell.
+## Opens the CellEditor popup positioned over the clicked cell.
+func _on_cell_edit_requested(row_index: int, col_index: int) -> void:
+	if _column_model == null:
+		return
+	if row_index < 0 or row_index >= _resources.size():
+		return
+	var vis := _column_model.visible_columns()
+	if col_index < 0 or col_index >= vis.size():
+		return
+	var col: ColumnDef = vis[col_index]
+	var resource: Resource = _resources[row_index]
+
+	# Compute screen-space rect for the cell.
+	# _content rows are inside the ScrollContainer; get_screen_transform() is
+	# the reliable way to find the cell's actual screen position.
+	var row_node: GridRow = _content.get_child(row_index) as GridRow
+	if row_node == null:
+		return
+	var row_global: Vector2 = row_node.get_screen_transform().origin
+	var cell_rect := Rect2i(
+		int(row_global.x) + _col_x_offsets[col_index],
+		int(row_global.y),
+		col.width,
+		ROW_HEIGHT
+	)
+	_cell_editor.open(resource, col, cell_rect)
+
+
+## Relay the committed value out to GoSheetsPanel.
+func _on_cell_value_committed(
+		resource: Resource,
+		property: StringName,
+		old_value: Variant,
+		new_value: Variant) -> void:
+	cell_value_changed.emit(resource, property, old_value, new_value)
 
 
 func _on_header_clicked(col_index: int) -> void:

@@ -9,6 +9,9 @@ class_name GridRow
 extends Control
 
 signal row_clicked(row_index: int)
+## Emitted on double-click.  [param col_index] is the index into the
+## *visible* columns array, matching the column under the cursor.
+signal cell_edit_requested(row_index: int, col_index: int)
 
 const ROW_HEIGHT := 24
 
@@ -16,6 +19,10 @@ var _index: int = -1
 var _labels: Array = []   # Array of Label
 ## X positions of column dividers, drawn in _draw().
 var _col_boundaries: Array[int] = []
+
+# Kept from the last bind() call so gui_input can map click → column.
+var _bound_columns: Array = []
+var _bound_x_offsets: Array[int] = []
 
 # Background panel for selection highlight
 var _bg: ColorRect
@@ -59,6 +66,8 @@ func bind(
 	is_selected: bool
 ) -> void:
 	_index = index
+	_bound_columns  = columns
+	_bound_x_offsets = x_offsets
 
 	# Update column divider positions for _draw().
 	_col_boundaries.clear()
@@ -151,9 +160,26 @@ static func _format_value(value: Variant, col: ColumnDef) -> String:
 # Input
 # ---------------------------------------------------------------------------
 
+func _col_index_at(local_x: float) -> int:
+	for i in _bound_columns.size():
+		var col: ColumnDef = _bound_columns[i]
+		if col.collapsed:
+			continue
+		var x0: int = _bound_x_offsets[i]
+		if local_x >= x0 and local_x < x0 + col.width:
+			return i
+	return -1
+
+
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mbe := event as InputEventMouseButton
-		if mbe.pressed and mbe.button_index == MOUSE_BUTTON_LEFT:
-			row_clicked.emit(_index)
-			accept_event()
+		if mbe.button_index == MOUSE_BUTTON_LEFT:
+			if mbe.pressed:
+				row_clicked.emit(_index)
+				accept_event()
+			if mbe.double_click:
+				var ci := _col_index_at(mbe.position.x)
+				if ci >= 0:
+					cell_edit_requested.emit(_index, ci)
+				accept_event()
