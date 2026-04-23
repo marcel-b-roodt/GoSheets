@@ -1,3 +1,11 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# GdUnit4 — installed locally via Godot Asset Library.
+# CI downloads it automatically via MikeSchulze/gdUnit4-action.
+addons/gdUnit4/
+
+# Godot-generated UID sidecar files and import cache
+*.uid
+*.import
