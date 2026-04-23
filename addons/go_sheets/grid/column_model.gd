@@ -99,15 +99,13 @@ static func _get_export_properties(type_name: StringName) -> Array[Dictionary]:
 		# a temporary instance.
 		var global_classes: Array = ProjectSettings.get_global_class_list()
 		for entry: Dictionary in global_classes:
-			if entry.get("class", &"") == type_name:
+			if entry.get("class", "") == (type_name as String):
 				var script: GDScript = load(entry.get("path", ""))
 				if script:
 					var tmp: Resource = script.new()
 					if tmp:
 						props = tmp.get_property_list()
 				break
-
-	for prop: Dictionary in props:
 		if _is_user_export(prop):
 			result.append(prop)
 

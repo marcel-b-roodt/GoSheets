@@ -212,21 +212,25 @@ static func _resource_matches(
 static func _load_resources_of_type(
 		paths: Array[String],
 		type_name: StringName) -> Array[Resource]:
+	# Resolve the target Script object from the global class list.
+	# Comparing Script objects by identity is more reliable than comparing names.
+	var target_script: Script = null
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == (type_name as String):
+			target_script = load(entry.get("path", ""))
+			break
+	if target_script == null:
+		return []
+
 	var out: Array[Resource] = []
 	for path: String in paths:
 		var res := ResourceLoader.load(path)
 		if res == null:
 			continue
-		# Check using get_class() or script class_name via is_class
-		if res.get_script() == null:
-			continue
-		var script := res.get_script() as GDScript
-		if script == null:
-			continue
-		# Walk script inheritance to match type_name
-		var s: GDScript = script
+		# Walk the script chain looking for target_script
+		var s: Script = res.get_script()
 		while s != null:
-			if s.get_global_name() == type_name:
+			if s == target_script:
 				out.append(res)
 				break
 			s = s.get_base_script()
