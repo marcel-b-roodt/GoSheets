@@ -40,12 +40,21 @@ var _column_model: ColumnModel = null
 var _debug_toggle: CheckButton
 var _debug_mode: bool = false
 
+## Cached flat list of all .tres/.res paths under the scan root.
+## Populated by _refresh_path_cache() and kept up-to-date via
+## EditorFileSystem.filesystem_changed.
+var _path_cache: Array[String] = []
+var _path_cache_dirty: bool = true
+
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		return
 	_settings = _SETTINGS_SCRIPT.load_or_create()
 	_build_ui()
+	# Connect EditorFileSystem so file additions/deletions auto-refresh the grid.
+	var efs := EditorInterface.get_resource_filesystem()
+	efs.filesystem_changed.connect(_on_filesystem_changed)
 	_populate_type_selector()
 	# Restore last selection
 	if _settings.last_selected_type != "":
@@ -160,15 +169,16 @@ func _on_type_selected(type_name: StringName) -> void:
 	for col: ColumnDef in _column_model.columns:
 		_dbg("    col '%s'  type=%d  visible=%s" % [col.property_name, col.property_type, col.visible])
 
-	# Scan for resources of this type
-	var all_paths := ResourceScanner.scan(_settings.scan_root)
-	_dbg("ResourceScanner: %d path(s) under '%s'" % [all_paths.size(), _settings.scan_root])
+	# Use cached path list (rebuilt when filesystem changes or root changes)
+	if _path_cache_dirty:
+		_refresh_path_cache()
+	_dbg("Path cache: %d path(s) under '%s'" % [_path_cache.size(), _settings.scan_root])
 
 	# Resolve target script path for matching
 	var target_script_path := _resolve_script_path(type_name)
 	_dbg("Target script: %s" % (target_script_path if target_script_path != "" else "NOT FOUND"))
 
-	_all_resources = _load_resources_of_type_by_path(all_paths, target_script_path)
+	_all_resources = _load_resources_of_type_by_path(_path_cache, target_script_path)
 	_dbg("Matched %d resource(s) of type %s" % [_all_resources.size(), type_name])
 	for r: Resource in _all_resources:
 		_dbg("  MATCH: %s" % r.resource_path)
@@ -189,6 +199,7 @@ func _on_row_selected(resource: Resource) -> void:
 
 func _on_refresh_requested() -> void:
 	_dbg("--- Refresh requested")
+	_path_cache_dirty = true
 	_populate_type_selector()
 	if _settings.last_selected_type != "":
 		_on_type_selected(_settings.last_selected_type)
@@ -200,8 +211,16 @@ func _on_scan_root_pressed() -> void:
 	_settings.scan_root = roots[(idx + 1) % roots.size()]
 	_settings.save()
 	_scan_root_btn.text = "Scan Root: " + _settings.scan_root
+	_path_cache_dirty = true
 	_dbg("Scan root changed to: %s" % _settings.scan_root)
 	if _settings.last_selected_type != "":
+		_on_type_selected(_settings.last_selected_type)
+
+
+func _on_filesystem_changed() -> void:
+	_path_cache_dirty = true
+	_dbg("EditorFileSystem changed — path cache invalidated")
+	if _settings != null and _settings.last_selected_type != "":
 		_on_type_selected(_settings.last_selected_type)
 
 
@@ -214,6 +233,36 @@ func _on_debug_toggled(pressed: bool) -> void:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+## Rebuild _path_cache from EditorFileSystem under the configured scan root.
+## Falls back to ResourceScanner (DirAccess) if EditorFileSystem is not ready.
+func _refresh_path_cache() -> void:
+	_path_cache.clear()
+	var efs := EditorInterface.get_resource_filesystem()
+	if efs.is_scanning():
+		# Editor hasn't finished its initial import scan yet — fall back.
+		_dbg("EditorFileSystem still scanning \u2014 falling back to DirAccess")
+		_path_cache = ResourceScanner.scan(_settings.scan_root)
+	else:
+		var root_dir := efs.get_filesystem_path(_settings.scan_root)
+		if root_dir == null:
+			_dbg("EditorFileSystem: scan root not found, falling back to DirAccess")
+			_path_cache = ResourceScanner.scan(_settings.scan_root)
+		else:
+			_walk_efs_dir(root_dir, _path_cache)
+	_path_cache_dirty = false
+	_dbg("Path cache rebuilt: %d path(s)" % _path_cache.size())
+
+
+## Walk an EditorFileSystemDirectory tree, collecting .tres/.res paths.
+func _walk_efs_dir(dir: EditorFileSystemDirectory, out: Array[String]) -> void:
+	for i in dir.get_file_count():
+		var fname := dir.get_file(i)
+		if fname.ends_with(".tres") or fname.ends_with(".res"):
+			out.append(dir.get_file_path(i))
+	for i in dir.get_subdir_count():
+		_walk_efs_dir(dir.get_subdir(i), out)
+
 
 func _apply_filter(text: String) -> void:
 	if _column_model == null:

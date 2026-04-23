@@ -110,6 +110,32 @@ func test_does_not_return_directory_names() -> void:
 	assert_array(result).is_empty()
 
 
+# ---------------------------------------------------------------------------
+# Regression tests — path handling
+# ---------------------------------------------------------------------------
+
+func test_trailing_slash_does_not_break_scan() -> void:
+	# Regression: rstrip("/") on "res://" produces "res:" which DirAccess
+	# cannot open, returning null and silently yielding zero results.
+	# Passing a path with a trailing slash must still find files.
+	_touch(_tmp_root + "/item.tres")
+	var result := ResourceScanner.scan(_tmp_root + "/")
+	assert_array(result).has_size(1)
+	assert_bool(result[0].ends_with("item.tres")).is_true()
+
+
+func test_returned_paths_are_valid_res_paths() -> void:
+	# Paths must be joinable — no double-slashes or stripped schemes.
+	_mkdir(_tmp_root + "/sub")
+	_touch(_tmp_root + "/sub/item.tres")
+	var result := ResourceScanner.scan(_tmp_root)
+	assert_array(result).has_size(1)
+	# path_join should have produced a single slash between segments
+	var path: String = result[0]
+	assert_bool(path.contains("//sub")).is_false()
+	assert_bool(path.ends_with("sub/item.tres")).is_true()
+
+
 func test_trailing_slash_on_root_path_is_handled() -> void:
 	_touch(_tmp_root + "/item.tres")
 	var result_with_slash := ResourceScanner.scan(_tmp_root + "/")
