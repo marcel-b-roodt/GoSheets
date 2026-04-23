@@ -130,7 +130,8 @@ func _on_type_selected(type_name: StringName) -> void:
 		_filter_text = ""
 		_filter_edit.text = ""
 		_column_model = null
-		_grid.load_data(ColumnModel.new(), [])
+		var empty: Array[Resource] = []
+		_grid.load_data(ColumnModel.new(), empty)
 		return
 
 	# Save selection
@@ -184,11 +185,10 @@ func _on_scan_root_pressed(btn: Button) -> void:
 func _apply_filter(text: String) -> void:
 	if _column_model == null:
 		return
-	var filtered: Array[Resource]
+	var filtered: Array[Resource] = []
 	if text == "":
 		filtered = _all_resources
 	else:
-		filtered = []
 		var vis := _column_model.visible_columns()
 		for res: Resource in _all_resources:
 			if _resource_matches(res, vis, text):
@@ -217,7 +217,7 @@ static func _load_resources_of_type(
 	var target_script: Script = null
 	for entry: Dictionary in ProjectSettings.get_global_class_list():
 		if entry.get("class", "") == (type_name as String):
-			target_script = load(entry.get("path", ""))
+			target_script = load(entry.get("path", "")) as Script
 			break
 	if target_script == null:
 		return []
