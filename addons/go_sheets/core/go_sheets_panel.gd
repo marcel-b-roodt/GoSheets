@@ -42,6 +42,8 @@ var _debug_mode: bool = false
 
 ## Timer used to debounce filter-text changes (avoids a query per keystroke).
 var _filter_timer: Timer
+## Outer layout VBoxContainer — stored so debug output can inspect its size.
+var _vbox: VBoxContainer
 
 ## Cached flat list of all .tres/.res paths under the scan root.
 ## Populated by _refresh_path_cache() and kept up-to-date via
@@ -59,6 +61,12 @@ var _resource_cache: Dictionary = {}
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		return
+	# EditorInterface.get_editor_main_screen() is a VBoxContainer.
+	# When a node is added to a Container its layout_mode is forced to
+	# CONTAINER, making anchors irrelevant.  SIZE_EXPAND_FILL ensures
+	# Godot's Container layout gives this panel the full available height.
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	_settings = _SETTINGS_SCRIPT.load_or_create()
 	_build_ui()
 	# Connect EditorFileSystem so file additions/deletions auto-refresh the grid.
@@ -77,14 +85,14 @@ func _ready() -> void:
 func _build_ui() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(vbox)
+	_vbox = VBoxContainer.new()
+	_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_vbox)
 
 	# --- Toolbar ---
 	var toolbar := HBoxContainer.new()
 	toolbar.custom_minimum_size = Vector2(0, 32)
-	vbox.add_child(toolbar)
+	_vbox.add_child(toolbar)
 
 	var type_label := Label.new()
 	type_label.text = "  Resource Type:"
@@ -112,7 +120,7 @@ func _build_ui() -> void:
 	# --- Filter bar ---
 	var filter_bar := HBoxContainer.new()
 	filter_bar.custom_minimum_size = Vector2(0, 28)
-	vbox.add_child(filter_bar)
+	_vbox.add_child(filter_bar)
 
 	var filter_label := Label.new()
 	filter_label.text = "  Filter:"
@@ -137,14 +145,14 @@ func _build_ui() -> void:
 	filter_bar.add_child(clear_btn)
 
 	# --- Separator ---
-	vbox.add_child(HSeparator.new())
+	_vbox.add_child(HSeparator.new())
 
 	# --- Grid ---
 	_grid = _RESOURCE_GRID_SCRIPT.new()
 	_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_grid.debug_mode = _debug_mode
 	_grid.row_selected.connect(_on_row_selected)
-	vbox.add_child(_grid)
+	_vbox.add_child(_grid)
 
 	# --- Filter debounce timer ---
 	_filter_timer = Timer.new()
@@ -206,7 +214,14 @@ func _on_type_selected(type_name: StringName) -> void:
 
 	if _resource_cache.has(type_name):
 		_all_resources = _resource_cache[type_name]
-		_dbg("Resource cache HIT: %d resource(s) for %s" % [_all_resources.size(), type_name])
+		if _all_resources.is_empty():
+			# Stale empty entry (e.g. from a broken previous run) — reload.
+			_resource_cache.erase(type_name)
+			_all_resources = _load_resources_of_type_by_path(_path_cache, target_script_path)
+			_dbg("Stale-empty cache cleared; loaded %d for %s" % [_all_resources.size(), type_name])
+			_resource_cache[type_name] = _all_resources
+		else:
+			_dbg("Resource cache HIT: %d resource(s) for %s" % [_all_resources.size(), type_name])
 	else:
 		_all_resources = _load_resources_of_type_by_path(_path_cache, target_script_path)
 		_dbg("Matched %d resource(s) of type %s" % [_all_resources.size(), type_name])
@@ -268,6 +283,20 @@ func _on_debug_toggled(pressed: bool) -> void:
 		_grid.debug_mode = pressed
 	if pressed:
 		_dbg("Debug mode enabled — output will appear in Godot Output panel.")
+		_print_panel_debug.call_deferred()
+
+
+func _print_panel_debug() -> void:
+	var parent_size := Vector2.ZERO
+	if get_parent() is Control:
+		parent_size = (get_parent() as Control).size
+	_dbg("[Panel layout] parent=%s  self=%s  vbox=%s  grid=%s  size_flags_v=%d" % [
+		str(parent_size),
+		str(size),
+		str(_vbox.size if _vbox else Vector2.ZERO),
+		str(_grid.size if _grid else Vector2.ZERO),
+		size_flags_vertical,
+	])
 
 
 # ---------------------------------------------------------------------------

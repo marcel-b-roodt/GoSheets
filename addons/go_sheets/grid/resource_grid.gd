@@ -230,11 +230,16 @@ static func _variant_less(a: Variant, b: Variant) -> bool:
 # ---------------------------------------------------------------------------
 
 func _print_layout_debug() -> void:
-	print("[GoSheets/Grid] self.size=%s  scroll.size=%s  content.size=%s  rows=%d" % [
+	var parent_size := Vector2.ZERO
+	if get_parent() is Control:
+		parent_size = (get_parent() as Control).size
+	print("[GoSheets/Grid] parent=%s  self=%s  scroll=%s  content=%s  rows=%d  v_flags=%d" % [
+		str(parent_size),
 		str(size),
 		str(_scroll.size if _scroll else Vector2.ZERO),
 		str(_content.size if _content else Vector2.ZERO),
 		_content.get_child_count() if _content else 0,
+		size_flags_vertical,
 	])
 	if _content:
 		for i in min(_content.get_child_count(), 8):
