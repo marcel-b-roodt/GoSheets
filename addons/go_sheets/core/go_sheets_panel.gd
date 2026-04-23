@@ -2,10 +2,12 @@
 ## GoSheetsPanel — main screen root.
 ##
 ## Owns the full Resources tab layout:
-##   • Toolbar : TypeSelector dropdown + Refresh button
+##   • Toolbar : TypeSelector dropdown + Refresh button + Debug toggle
 ##   • Filter  : live-search LineEdit
-##   • Debug   : collapsible log pane (visible when debug_mode is on)
 ##   • Grid    : ResourceGrid showing one row per matching resource
+##
+## Debug mode: enable the 'Debug' toggle in the toolbar to write
+## diagnostic prints to the Godot Output panel (prefixed [GoSheets]).
 ##
 ## Data flow:
 ##   TypeSelector.type_selected → _on_type_selected()
@@ -21,8 +23,6 @@ const _RESOURCE_GRID_SCRIPT  := preload("res://addons/go_sheets/grid/resource_gr
 const _COLUMN_MODEL_SCRIPT   := preload("res://addons/go_sheets/grid/column_model.gd")
 const _SETTINGS_SCRIPT       := preload("res://addons/go_sheets/core/go_sheets_settings.gd")
 
-const _DEBUG_MAX_LINES := 200
-
 # ── State ─────────────────────────────────────────────────────────────────────
 var _settings: GoSheetsSettings
 var _type_selector: TypeSelector
@@ -37,9 +37,6 @@ var _filter_text: String = ""
 ## The active ColumnModel
 var _column_model: ColumnModel = null
 
-# Debug pane nodes
-var _debug_panel: PanelContainer
-var _debug_log: RichTextLabel
 var _debug_toggle: CheckButton
 var _debug_mode: bool = false
 
@@ -118,39 +115,6 @@ func _build_ui() -> void:
 	)
 	filter_bar.add_child(clear_btn)
 
-	# --- Debug pane (hidden by default) ---
-	_debug_panel = PanelContainer.new()
-	_debug_panel.custom_minimum_size = Vector2(0, 140)
-	_debug_panel.visible = false
-	vbox.add_child(_debug_panel)
-
-	var debug_vbox := VBoxContainer.new()
-	_debug_panel.add_child(debug_vbox)
-
-	var debug_header := HBoxContainer.new()
-	debug_vbox.add_child(debug_header)
-
-	var debug_title := Label.new()
-	debug_title.text = "  Debug Log"
-	debug_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	debug_header.add_child(debug_title)
-
-	var clear_log_btn := Button.new()
-	clear_log_btn.text = "Clear"
-	clear_log_btn.pressed.connect(func() -> void: _debug_log.clear())
-	debug_header.add_child(clear_log_btn)
-
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	debug_vbox.add_child(scroll)
-
-	_debug_log = RichTextLabel.new()
-	_debug_log.bbcode_enabled = true
-	_debug_log.scroll_following = true
-	_debug_log.fit_content = true
-	_debug_log.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_debug_log)
-
 	# --- Separator ---
 	vbox.add_child(HSeparator.new())
 
@@ -183,7 +147,7 @@ func _on_type_selected(type_name: StringName) -> void:
 		_grid.load_data(ColumnModel.new(), empty)
 		return
 
-	_dbg("─── Type selected: [b]%s[/b]" % type_name)
+	_dbg("--- Type selected: %s" % type_name)
 
 	# Save selection
 	_settings.last_selected_type = type_name as String
@@ -194,7 +158,7 @@ func _on_type_selected(type_name: StringName) -> void:
 	_column_model = _COLUMN_MODEL_SCRIPT.build(type_name, saved_layout)
 	_dbg("ColumnModel built: %d column(s)" % _column_model.columns.size())
 	for col: ColumnDef in _column_model.columns:
-		_dbg("  col [i]%s[/i]  type=%d  visible=%s" % [col.property_name, col.property_type, col.visible])
+		_dbg("    col '%s'  type=%d  visible=%s" % [col.property_name, col.property_type, col.visible])
 
 	# Scan for resources of this type
 	var all_paths := ResourceScanner.scan(_settings.scan_root)
@@ -202,13 +166,12 @@ func _on_type_selected(type_name: StringName) -> void:
 
 	# Resolve target script path for matching
 	var target_script_path := _resolve_script_path(type_name)
-	var not_found := "[color=red]NOT FOUND[/color]"
-	_dbg("Target script: %s" % (target_script_path if target_script_path != "" else not_found))
+	_dbg("Target script: %s" % (target_script_path if target_script_path != "" else "NOT FOUND"))
 
 	_all_resources = _load_resources_of_type_by_path(all_paths, target_script_path)
-	_dbg("Matched [b]%d[/b] resource(s) of type %s" % [_all_resources.size(), type_name])
+	_dbg("Matched %d resource(s) of type %s" % [_all_resources.size(), type_name])
 	for r: Resource in _all_resources:
-		_dbg("  ✓ %s" % r.resource_path)
+		_dbg("  MATCH: %s" % r.resource_path)
 
 	_apply_filter(_filter_text)
 
@@ -225,7 +188,7 @@ func _on_row_selected(resource: Resource) -> void:
 
 
 func _on_refresh_requested() -> void:
-	_dbg("─── Refresh requested")
+	_dbg("--- Refresh requested")
 	_populate_type_selector()
 	if _settings.last_selected_type != "":
 		_on_type_selected(_settings.last_selected_type)
@@ -244,9 +207,8 @@ func _on_scan_root_pressed() -> void:
 
 func _on_debug_toggled(pressed: bool) -> void:
 	_debug_mode = pressed
-	_debug_panel.visible = pressed
 	if pressed:
-		_dbg("Debug mode enabled.")
+		_dbg("Debug mode enabled — output will appear in Godot Output panel.")
 
 
 # ---------------------------------------------------------------------------
@@ -268,17 +230,11 @@ func _apply_filter(text: String) -> void:
 	_grid.load_data(_column_model, filtered)
 
 
-## Log a message to the debug pane (BBCode supported).
+## Print [param msg] to the Godot Output panel, prefixed with [GoSheets].
 ## Silently swallowed when debug mode is off.
 func _dbg(msg: String) -> void:
-	if not _debug_mode:
-		return
-	if _debug_log == null:
-		return
-	# Trim oldest lines to keep the log from growing unbounded
-	if _debug_log.get_line_count() > _DEBUG_MAX_LINES:
-		_debug_log.clear()
-	_debug_log.append_text(msg + "\n")
+	if _debug_mode:
+		print("[GoSheets] ", msg)
 
 
 static func _resource_matches(
@@ -302,25 +258,32 @@ static func _resolve_script_path(type_name: StringName) -> String:
 	return ""
 
 
-## Match resources by comparing their script's resource_path against
-## [param target_script_path].  Script object identity comparison is
-## unreliable in Godot 4 because ResourceLoader may return different
-## Script instances for the same file.
-static func _load_resources_of_type_by_path(
+## Load all resources whose script (or any ancestor script) lives at
+## [param target_script_path].  Uses is_instance_of() for reliable
+## type-checking — avoids Script object identity pitfalls in Godot 4.
+func _load_resources_of_type_by_path(
 		paths: Array[String],
 		target_script_path: String) -> Array[Resource]:
 	if target_script_path == "":
+		_dbg("  ABORT: target_script_path is empty")
+		return []
+
+	var target_script := load(target_script_path) as Script
+	if target_script == null:
+		_dbg("  ABORT: could not load script at '%s'" % target_script_path)
 		return []
 
 	var out: Array[Resource] = []
 	for path: String in paths:
 		var res := ResourceLoader.load(path)
 		if res == null:
+			_dbg("  SKIP (null): %s" % path)
 			continue
-		var s: Script = res.get_script() as Script
-		while s != null:
-			if s.resource_path == target_script_path:
-				out.append(res)
-				break
-			s = s.get_base_script() as Script
+		if is_instance_of(res, target_script):
+			_dbg("  MATCH: %s" % path)
+			out.append(res)
+		else:
+			var s := res.get_script() as Script
+			var sname := s.resource_path if s != null else "(no script)"
+			_dbg("  skip: %s  [script=%s]" % [path, sname])
 	return out
