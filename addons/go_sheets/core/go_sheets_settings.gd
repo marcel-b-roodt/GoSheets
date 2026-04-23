@@ -1,3 +1,4 @@
+@tool
 ## GoSheetsSettings
 ##
 ## Persists plugin configuration to user://go_sheets_settings.tres.

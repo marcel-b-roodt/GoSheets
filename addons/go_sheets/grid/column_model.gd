@@ -106,6 +106,8 @@ static func _get_export_properties(type_name: StringName) -> Array[Dictionary]:
 					if tmp:
 						props = tmp.get_property_list()
 				break
+
+	for prop: Dictionary in props:
 		if _is_user_export(prop):
 			result.append(prop)
 
