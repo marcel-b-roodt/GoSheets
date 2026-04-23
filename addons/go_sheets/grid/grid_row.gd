@@ -14,6 +14,8 @@ const ROW_HEIGHT := 24
 
 var _index: int = -1
 var _labels: Array = []   # Array of Label
+## X positions of column dividers, drawn in _draw().
+var _col_boundaries: Array[int] = []
 
 # Background panel for selection highlight
 var _bg: ColorRect
@@ -21,6 +23,13 @@ var _bg: ColorRect
 
 func _ready() -> void:
 	_ensure_setup()
+
+
+func _draw() -> void:
+	# Subtle vertical column divider lines.
+	var c := Color(1.0, 1.0, 1.0, 0.07)
+	for x in _col_boundaries:
+		draw_line(Vector2(x, 2), Vector2(x, ROW_HEIGHT - 2), c, 1.0)
 
 
 ## Called eagerly before tree entry so bind() works immediately after new().
@@ -50,6 +59,12 @@ func bind(
 	is_selected: bool
 ) -> void:
 	_index = index
+
+	# Update column divider positions for _draw().
+	_col_boundaries.clear()
+	for i in range(1, x_offsets.size()):
+		_col_boundaries.append(x_offsets[i])
+	queue_redraw()
 
 	# Grow label pool as needed
 	while _labels.size() < columns.size():
