@@ -2,9 +2,9 @@
 .godot/
 /android/
 
-# GdUnit4 — installed locally via Godot Asset Library.
-# CI downloads it automatically via MikeSchulze/gdUnit4-action.
-addons/gdUnit4/
+# GdUnit4 — tracked as a git submodule at addons/gdUnit4.
+# The submodule itself is committed; only its cache artefacts are ignored.
+addons/gdUnit4/.godot/
 
 # Godot-generated UID sidecar files and import cache
 *.uid

@@ -45,7 +45,10 @@ var _total_width: int = 0
 func _ready() -> void:
 	if not Engine.is_editor_hint():
 		return
-	_build_ui()
+	# _build_ui is called eagerly from load_data / pool init;
+	# guard here prevents a second build if the node is re-used.
+	if _scroll == null:
+		_build_ui()
 
 
 # ---------------------------------------------------------------------------
@@ -54,6 +57,8 @@ func _ready() -> void:
 
 ## Load [param resources] and display them using [param col_model].
 func load_data(col_model: ColumnModel, resources: Array[Resource]) -> void:
+	if _scroll == null:
+		_build_ui()
 	_column_model = col_model
 	_resources    = resources
 	_selected_index = -1
@@ -95,6 +100,7 @@ func _build_ui() -> void:
 	# Pre-allocate row pool
 	for _i in INITIAL_POOL_SIZE:
 		var row: GridRow = _GRID_ROW_SCRIPT.new()
+		row._ensure_setup()
 		row.row_clicked.connect(_on_row_clicked)
 		_content.add_child(row)
 		_row_pool.append(row)
@@ -150,6 +156,7 @@ func _populate_rows() -> void:
 	# Grow pool if needed
 	while _row_pool.size() < _resources.size():
 		var row: GridRow = _GRID_ROW_SCRIPT.new()
+		row._ensure_setup()
 		row.row_clicked.connect(_on_row_clicked)
 		_content.add_child(row)
 		_row_pool.append(row)

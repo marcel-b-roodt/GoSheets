@@ -20,6 +20,13 @@ var _bg: ColorRect
 
 
 func _ready() -> void:
+	_ensure_setup()
+
+
+## Called eagerly before tree entry so bind() works immediately after new().
+func _ensure_setup() -> void:
+	if _bg != null:
+		return
 	if not Engine.is_editor_hint():
 		return
 	_bg = ColorRect.new()
