@@ -48,6 +48,12 @@ var _filter_timer: Timer
 ## EditorFileSystem.filesystem_changed.
 var _path_cache: Array[String] = []
 var _path_cache_dirty: bool = true
+## Maps each cached path → resource type string from EditorFileSystem.
+## Populated alongside _path_cache; used to skip loading mismatched files.
+var _type_map: Dictionary = {}
+## Per-type resource cache.  Cleared on filesystem_changed.
+## Key: StringName(type_name)  Value: Array[Resource]
+var _resource_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -136,6 +142,7 @@ func _build_ui() -> void:
 	# --- Grid ---
 	_grid = _RESOURCE_GRID_SCRIPT.new()
 	_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_grid.debug_mode = _debug_mode
 	_grid.row_selected.connect(_on_row_selected)
 	vbox.add_child(_grid)
 
@@ -195,10 +202,15 @@ func _on_type_selected(type_name: StringName) -> void:
 	var target_script_path := _resolve_script_path(type_name)
 	_dbg("Target script: %s" % (target_script_path if target_script_path != "" else "NOT FOUND"))
 
-	_all_resources = _load_resources_of_type_by_path(_path_cache, target_script_path)
-	_dbg("Matched %d resource(s) of type %s" % [_all_resources.size(), type_name])
-	for r: Resource in _all_resources:
-		_dbg("  MATCH: %s" % r.resource_path)
+	if _resource_cache.has(type_name):
+		_all_resources = _resource_cache[type_name]
+		_dbg("Resource cache HIT: %d resource(s) for %s" % [_all_resources.size(), type_name])
+	else:
+		_all_resources = _load_resources_of_type_by_path(_path_cache, target_script_path)
+		_dbg("Matched %d resource(s) of type %s" % [_all_resources.size(), type_name])
+		for r: Resource in _all_resources:
+			_dbg("  MATCH: %s" % r.resource_path)
+		_resource_cache[type_name] = _all_resources
 
 	_apply_filter(_filter_text)
 
@@ -242,13 +254,16 @@ func _on_scan_root_pressed() -> void:
 
 func _on_filesystem_changed() -> void:
 	_path_cache_dirty = true
-	_dbg("EditorFileSystem changed — path cache invalidated")
+	_resource_cache.clear()
+	_dbg("EditorFileSystem changed — path cache and resource cache invalidated")
 	if _settings != null and _settings.last_selected_type != "":
 		_on_type_selected(_settings.last_selected_type)
 
 
 func _on_debug_toggled(pressed: bool) -> void:
 	_debug_mode = pressed
+	if _grid:
+		_grid.debug_mode = pressed
 	if pressed:
 		_dbg("Debug mode enabled — output will appear in Godot Output panel.")
 
@@ -261,6 +276,7 @@ func _on_debug_toggled(pressed: bool) -> void:
 ## Falls back to ResourceScanner (DirAccess) if EditorFileSystem is not ready.
 func _refresh_path_cache() -> void:
 	_path_cache.clear()
+	_type_map.clear()
 	var efs := EditorInterface.get_resource_filesystem()
 	if efs.is_scanning():
 		# Editor hasn't finished its initial import scan yet — fall back.
@@ -277,12 +293,15 @@ func _refresh_path_cache() -> void:
 	_dbg("Path cache rebuilt: %d path(s)" % _path_cache.size())
 
 
-## Walk an EditorFileSystemDirectory tree, collecting .tres/.res paths.
+## Walk an EditorFileSystemDirectory tree, collecting .tres/.res paths
+## and recording each file's declared type in _type_map.
 func _walk_efs_dir(dir: EditorFileSystemDirectory, out: Array[String]) -> void:
 	for i in dir.get_file_count():
 		var fname := dir.get_file(i)
 		if fname.ends_with(".tres") or fname.ends_with(".res"):
-			out.append(dir.get_file_path(i))
+			var path := dir.get_file_path(i)
+			out.append(path)
+			_type_map[path] = dir.get_file_type(i)
 	for i in dir.get_subdir_count():
 		_walk_efs_dir(dir.get_subdir(i), out)
 
@@ -333,6 +352,8 @@ static func _resolve_script_path(type_name: StringName) -> String:
 ## Load all resources whose script (or any ancestor script) lives at
 ## [param target_script_path].  Uses is_instance_of() for reliable
 ## type-checking — avoids Script object identity pitfalls in Godot 4.
+## Uses _type_map to skip loading built-in-typed files that can’t possibly
+## match the target user class (avoids unnecessary ResourceLoader.load calls).
 func _load_resources_of_type_by_path(
 		paths: Array[String],
 		target_script_path: String) -> Array[Resource]:
@@ -347,6 +368,12 @@ func _load_resources_of_type_by_path(
 
 	var out: Array[Resource] = []
 	for path: String in paths:
+		# Fast pre-skip: if EFS tells us this is a built-in Godot class
+		# (i.e. in ClassDB) that is different from our target, don’t load.
+		var known_type: String = _type_map.get(path, "")
+		if known_type != "" and ClassDB.class_exists(known_type):
+			_dbg("  skip (built-in, no load): %s  [%s]" % [path, known_type])
+			continue
 		var res := ResourceLoader.load(path)
 		if res == null:
 			_dbg("  SKIP (null): %s" % path)

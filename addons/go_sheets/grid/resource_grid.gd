@@ -10,7 +10,7 @@
 ## Add as a child of GoSheetsPanel; call load_data() to populate.
 
 class_name ResourceGrid
-extends Control
+extends VBoxContainer
 
 signal row_selected(resource: Resource)
 
@@ -20,6 +20,9 @@ const _GRID_ROW_SCRIPT := preload("res://addons/go_sheets/grid/grid_row.gd")
 # ── Layout constants ──────────────────────────────────────────────────────────
 const ROW_HEIGHT    := 24
 const HEADER_HEIGHT := 28
+
+## Set to true (via the panel’s Debug toggle) to print layout diagnostics.
+var debug_mode: bool = false
 
 # ── State ─────────────────────────────────────────────────────────────────────
 var _column_model: ColumnModel
@@ -58,7 +61,12 @@ func load_data(col_model: ColumnModel, resources: Array[Resource]) -> void:
 	_selected_index = -1
 	_sort_column = -1
 	_sort_dir    = 0
-	_rebuild()
+	# Defer if called before this node's _ready() has completed (e.g. during
+	# parent._ready()), so all child _ready() callbacks settle before row creation.
+	if is_node_ready():
+		_rebuild()
+	else:
+		_rebuild.call_deferred()
 
 
 ## Return the currently selected Resource, or null.
@@ -73,18 +81,19 @@ func selected_resource() -> Resource:
 # ---------------------------------------------------------------------------
 
 func _build_ui() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_theme_constant_override("separation", 0)
 
-	# Fixed header row
+	# Fixed header row — VBox gives it exactly HEADER_HEIGHT via minimum_size.
 	_header_bar = Control.new()
-	_header_bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	_header_bar.custom_minimum_size = Vector2(0, HEADER_HEIGHT)
+	_header_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_header_bar.clip_contents = true
 	add_child(_header_bar)
 
-	# Scrollable body beneath header
+	# Scrollable body — SIZE_EXPAND_FILL takes the remaining vertical space.
 	_scroll = ScrollContainer.new()
-	_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_scroll.offset_top = HEADER_HEIGHT
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.follow_focus = false
 	add_child(_scroll)
 
@@ -145,7 +154,8 @@ func _populate_rows() -> void:
 		row.custom_minimum_size = Vector2(0, ROW_HEIGHT)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.row_clicked.connect(_on_row_clicked)
-		_content.add_child(row)  # _ready() fires here → _ensure_setup() inside
+		_content.add_child(row)
+		row._ensure_setup()  # explicit: _ready() may still be deferred
 
 	# Bind and show active rows.
 	for i in _resources.size():
@@ -156,6 +166,9 @@ func _populate_rows() -> void:
 	# Hide surplus rows (VBoxContainer skips hidden children in layout).
 	for i in range(_resources.size(), _content.get_child_count()):
 		_content.get_child(i).hide()
+
+	if debug_mode:
+		_print_layout_debug.call_deferred()
 
 
 # ---------------------------------------------------------------------------
@@ -210,3 +223,26 @@ static func _variant_less(a: Variant, b: Variant) -> bool:
 			return int(a) < int(b)
 		_:
 			return str(a) < str(b)
+
+
+# ---------------------------------------------------------------------------
+# Debug
+# ---------------------------------------------------------------------------
+
+func _print_layout_debug() -> void:
+	print("[GoSheets/Grid] self.size=%s  scroll.size=%s  content.size=%s  rows=%d" % [
+		str(size),
+		str(_scroll.size if _scroll else Vector2.ZERO),
+		str(_content.size if _content else Vector2.ZERO),
+		_content.get_child_count() if _content else 0,
+	])
+	if _content:
+		for i in min(_content.get_child_count(), 8):
+			var row: Node = _content.get_child(i)
+			print("  row[%d] visible=%s  pos=%s  size=%s  min=%s" % [
+				i,
+				str(row.visible),
+				str(row.position),
+				str(row.size),
+				str((row as Control).custom_minimum_size),
+			])
