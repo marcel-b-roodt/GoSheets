@@ -8,6 +8,14 @@
         "/^bash verify\\.sh 2>&1 \\| cat$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^cd \"/home/marcel/data/Work - Programming/GodotAddons/GoSheets\" && bash verify\\.sh 2>&1 \\| head -80$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"/home/marcel/data/Work - Programming/GodotAddons/GoSheets\" && bash verify\\.sh 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }
