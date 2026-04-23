@@ -15,7 +15,7 @@ cd "$REPO_ROOT"
 
 # Collect all .gd files under addons/ and tests/ (excludes gdUnit4 itself)
 mapfile -t GD_FILES < <(
-	find addons tests \
+	find addons tests test_scenes \
 		-name "*.gd" \
 		-not -path "*/gdUnit4/*" \
 		2>/dev/null | sort

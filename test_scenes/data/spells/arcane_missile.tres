@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SpellMetadata" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+spell_name = "Arcane Missile"
+description = "A quick, reliable bolt of pure arcane energy. Low cost and no cooldown make it the mage's bread-and-butter."
+mana_cost = 10
+cooldown = 0.5
+element = 5
+is_unlocked = true

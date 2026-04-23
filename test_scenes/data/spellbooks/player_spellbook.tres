@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="Spellbook" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://test_scenes/resources/spellbook.gd" id="1"]
+[ext_resource type="Resource" path="res://test_scenes/data/spells/fireball.tres" id="2"]
+[ext_resource type="Resource" path="res://test_scenes/data/spells/ice_shard.tres" id="3"]
+[ext_resource type="Resource" path="res://test_scenes/data/spells/chain_lightning.tres" id="4"]
+[ext_resource type="Resource" path="res://test_scenes/data/spells/stone_wall.tres" id="5"]
+[ext_resource type="Resource" path="res://test_scenes/data/spells/gale_force.tres" id="6"]
+[ext_resource type="Resource" path="res://test_scenes/data/spells/arcane_missile.tres" id="7"]
+
+[resource]
+script = ExtResource("1")
+owner_name = "The Arcane Player"
+max_spells = 8
+spells = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
