@@ -20,8 +20,9 @@ var _refresh_btn: Button
 var _index_to_class: Array[StringName] = []
 
 
-func _ready() -> void:
-	if not Engine.is_editor_hint():
+func _enter_tree() -> void:
+	# Guard: _enter_tree fires again if re-parented; build UI only once.
+	if _option != null:
 		return
 
 	_option = OptionButton.new()

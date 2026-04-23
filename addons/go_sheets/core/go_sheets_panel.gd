@@ -40,6 +40,9 @@ var _column_model: ColumnModel = null
 var _debug_toggle: CheckButton
 var _debug_mode: bool = false
 
+## Timer used to debounce filter-text changes (avoids a query per keystroke).
+var _filter_timer: Timer
+
 ## Cached flat list of all .tres/.res paths under the scan root.
 ## Populated by _refresh_path_cache() and kept up-to-date via
 ## EditorFileSystem.filesystem_changed.
@@ -112,15 +115,18 @@ func _build_ui() -> void:
 	_filter_edit = LineEdit.new()
 	_filter_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_filter_edit.placeholder_text = "Type to filter by any property value…"
-	_filter_edit.text_changed.connect(_on_filter_changed)
+	_filter_edit.text_changed.connect(_on_filter_text_changed)
 	filter_bar.add_child(_filter_edit)
 
 	var clear_btn := Button.new()
 	clear_btn.text = "✕"
 	clear_btn.tooltip_text = "Clear filter"
 	clear_btn.pressed.connect(func() -> void:
+		if _filter_timer:
+			_filter_timer.stop()
 		_filter_edit.text = ""
-		_on_filter_changed("")
+		_filter_text = ""
+		_apply_filter("")
 	)
 	filter_bar.add_child(clear_btn)
 
@@ -132,6 +138,13 @@ func _build_ui() -> void:
 	_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_grid.row_selected.connect(_on_row_selected)
 	vbox.add_child(_grid)
+
+	# --- Filter debounce timer ---
+	_filter_timer = Timer.new()
+	_filter_timer.wait_time = 0.25
+	_filter_timer.one_shot = true
+	_filter_timer.timeout.connect(_on_filter_apply)
+	add_child(_filter_timer)
 
 
 func _populate_type_selector() -> void:
@@ -147,6 +160,10 @@ func _populate_type_selector() -> void:
 # ---------------------------------------------------------------------------
 
 func _on_type_selected(type_name: StringName) -> void:
+	# Cancel any in-flight filter debounce — new type clears filter state.
+	if _filter_timer:
+		_filter_timer.stop()
+
 	if type_name == &"":
 		_all_resources = []
 		_filter_text = ""
@@ -186,8 +203,14 @@ func _on_type_selected(type_name: StringName) -> void:
 	_apply_filter(_filter_text)
 
 
-func _on_filter_changed(text: String) -> void:
+## Stores the new filter text and (re)starts the debounce timer.
+func _on_filter_text_changed(text: String) -> void:
 	_filter_text = text.to_lower()
+	_filter_timer.start()
+
+
+## Called when the debounce timer fires — applies the current filter.
+func _on_filter_apply() -> void:
 	_apply_filter(_filter_text)
 
 

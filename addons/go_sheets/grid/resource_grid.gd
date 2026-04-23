@@ -18,9 +18,8 @@ signal row_selected(resource: Resource)
 const _GRID_ROW_SCRIPT := preload("res://addons/go_sheets/grid/grid_row.gd")
 
 # ── Layout constants ──────────────────────────────────────────────────────────
-const ROW_HEIGHT        := 24
-const HEADER_HEIGHT     := 28
-const INITIAL_POOL_SIZE := 40   # pre-allocate rows; grows on demand
+const ROW_HEIGHT    := 24
+const HEADER_HEIGHT := 28
 
 # ── State ─────────────────────────────────────────────────────────────────────
 var _column_model: ColumnModel
@@ -33,9 +32,8 @@ var _sort_dir: int = 0          # 1 = asc, -1 = desc
 
 # ── UI nodes ─────────────────────────────────────────────────────────────────
 var _scroll: ScrollContainer
-var _content: Control          # full-height container — drives scroll range
+var _content: VBoxContainer    # auto-sizes from children; drives scroll range
 var _header_bar: Control       # fixed header above scroll
-var _row_pool: Array           # Array of GridRow
 
 # ── Column widths (index into visible_columns) ────────────────────────────────
 var _col_x_offsets: Array[int] = []
@@ -43,10 +41,6 @@ var _total_width: int = 0
 
 
 func _ready() -> void:
-	if not Engine.is_editor_hint():
-		return
-	# _build_ui is called eagerly from load_data / pool init;
-	# guard here prevents a second build if the node is re-used.
 	if _scroll == null:
 		_build_ui()
 
@@ -94,17 +88,10 @@ func _build_ui() -> void:
 	_scroll.follow_focus = false
 	add_child(_scroll)
 
-	_content = Control.new()
+	_content = VBoxContainer.new()
+	_content.add_theme_constant_override("separation", 0)
+	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_content)
-
-	# Pre-allocate row pool
-	for _i in INITIAL_POOL_SIZE:
-		var row: GridRow = _GRID_ROW_SCRIPT.new()
-		row._ensure_setup()
-		row.row_clicked.connect(_on_row_clicked)
-		_content.add_child(row)
-		_row_pool.append(row)
-		row.hide()
 
 
 func _rebuild() -> void:
@@ -123,7 +110,6 @@ func _compute_column_offsets() -> void:
 		_col_x_offsets.append(x)
 		x += col.width
 	_total_width = x
-	_content.custom_minimum_size = Vector2(_total_width, _resources.size() * ROW_HEIGHT)
 
 
 func _rebuild_header() -> void:
@@ -153,25 +139,23 @@ func _rebuild_header() -> void:
 func _populate_rows() -> void:
 	var vis := _column_model.visible_columns()
 
-	# Grow pool if needed
-	while _row_pool.size() < _resources.size():
+	# Grow the VBox child pool as needed (nodes are never freed, just hidden).
+	while _content.get_child_count() < _resources.size():
 		var row: GridRow = _GRID_ROW_SCRIPT.new()
-		row._ensure_setup()
+		row.custom_minimum_size = Vector2(0, ROW_HEIGHT)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.row_clicked.connect(_on_row_clicked)
-		_content.add_child(row)
-		_row_pool.append(row)
+		_content.add_child(row)  # _ready() fires here → _ensure_setup() inside
 
+	# Bind and show active rows.
 	for i in _resources.size():
-		var row: GridRow = _row_pool[i]
-		row.position = Vector2(0, i * ROW_HEIGHT)
-		row.custom_minimum_size = Vector2(_total_width, ROW_HEIGHT)
-		row.size = Vector2(_total_width, ROW_HEIGHT)
+		var row: GridRow = _content.get_child(i)
 		row.bind(i, _resources[i], vis, _col_x_offsets, i == _selected_index)
 		row.show()
 
-	# Hide unused rows
-	for i in range(_resources.size(), _row_pool.size()):
-		_row_pool[i].hide()
+	# Hide surplus rows (VBoxContainer skips hidden children in layout).
+	for i in range(_resources.size(), _content.get_child_count()):
+		_content.get_child(i).hide()
 
 
 # ---------------------------------------------------------------------------

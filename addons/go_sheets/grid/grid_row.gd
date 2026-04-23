@@ -27,8 +27,6 @@ func _ready() -> void:
 func _ensure_setup() -> void:
 	if _bg != null:
 		return
-	if not Engine.is_editor_hint():
-		return
 	_bg = ColorRect.new()
 	_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_bg.color = Color.TRANSPARENT
