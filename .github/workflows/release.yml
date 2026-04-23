@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build and draft GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Extract lines between the versioned heading and the next --- separator
+          awk "/^## \[$VERSION\]/{found=1; next} found && /^---/{exit} found{print}" \
+            CHANGELOG.md > release_notes.txt
+          {
+            echo "NOTES<<EOF"
+            cat release_notes.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build plugin zip
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          mkdir -p dist
+          zip -r "dist/GoSheets-v${VERSION}.zip" \
+            addons/go_sheets \
+            README.md \
+            CHANGELOG.md \
+            LICENSE \
+            --exclude "*.import"
+
+      - name: Create draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: "GoSheets v${{ steps.version.outputs.VERSION }}"
+          body: ${{ steps.changelog.outputs.NOTES }}
+          files: dist/GoSheets-v${{ steps.version.outputs.VERSION }}.zip

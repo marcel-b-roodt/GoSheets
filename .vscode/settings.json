@@ -1,6 +1,13 @@
 {
     "chat.tools.terminal.autoApprove": {
         "git remote": true,
-        "git add": true
+        "git add": true,
+        "git commit": true,
+        "git push": true,
+        "cp": true,
+        "/^bash verify\\.sh 2>&1 \\| cat$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

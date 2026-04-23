@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit — runs verify.sh before every commit.
+# Install once: git config core.hooksPath .githooks
+set -euo pipefail
+exec "$(git rev-parse --show-toplevel)/verify.sh"
