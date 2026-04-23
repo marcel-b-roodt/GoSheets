@@ -197,6 +197,8 @@ func _on_type_selected(type_name: StringName) -> void:
 	if _path_cache_dirty:
 		_refresh_path_cache()
 	_dbg("Path cache: %d path(s) under '%s'" % [_path_cache.size(), _settings.scan_root])
+	for p: String in _path_cache:
+		_dbg("  path: %s  [EFS type='%s']" % [p, _type_map.get(p, "?")])
 
 	# Resolve target script path for matching
 	var target_script_path := _resolve_script_path(type_name)
@@ -368,11 +370,13 @@ func _load_resources_of_type_by_path(
 
 	var out: Array[Resource] = []
 	for path: String in paths:
-		# Fast pre-skip: if EFS tells us this is a built-in Godot class
-		# (i.e. in ClassDB) that is different from our target, don’t load.
+		# Fast pre-skip: EFS gives us the engine class for binary .res files
+		# (e.g. "CompressedTexture2D", "AudioStreamOGGVorbis").  We can safely
+		# skip those without loading.  Script-backed .tres files report
+		# "Resource" — never skip those, they need to be loaded and checked.
 		var known_type: String = _type_map.get(path, "")
-		if known_type != "" and ClassDB.class_exists(known_type):
-			_dbg("  skip (built-in, no load): %s  [%s]" % [path, known_type])
+		if known_type != "" and known_type != "Resource" and ClassDB.class_exists(known_type):
+			_dbg("  skip (built-in %s, no load): %s" % [known_type, path])
 			continue
 		var res := ResourceLoader.load(path)
 		if res == null:
