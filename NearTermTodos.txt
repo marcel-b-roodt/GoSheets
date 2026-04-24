@@ -1,39 +1,47 @@
 GoSheets — Near-Term Todos
 ==========================
 
-Stage 2 — Inline Editing (next major milestone)
--------------------------------------------------
+Completed ✅
+-------------
+[x] 2-A  Inline cell editing (LineEdit / SpinBox / CheckBox / OptionButton / ColorPickerButton)
+[x] 2-B  Bidirectional sync: grid ↔ Inspector (300ms poll of UndoRedo version)
+[x] 2-C  Full Undo/Redo via EditorUndoRedoManager + ResourceSaver on do/undo
+[x]      Context menu multi-monitor fix (DisplayServer.mouse_get_position)
+[x]      Enum display names (PROPERTY_HINT_ENUM + hint_string resolution)
 
-[ ] 2-A  Make all grid cells editable with appropriate controls
-         - LineEdit  → String
-         - SpinBox   → int / float (PROPERTY_HINT_RANGE: use min/max/step from hint_string)
-         - CheckBox  → bool
-         - OptionButton → PROPERTY_HINT_ENUM (parse hint_string entries)
-         - ColorPickerButton → Color
-         - Resource picker button → PROPERTY_HINT_RESOURCE_TYPE (EditorInterface resource picker)
-         Priority order: String, bool, int/float first; enum + resource ref second.
+Remaining Stage 1
+------------------
+[ ] 1.7  Column reordering — drag a column header left/right to reorder;
+         persist new order in column_layouts.
 
-[ ] 2-B  Sync grid edits ↔ Godot Inspector / resource side panel
-         When a cell is changed in GoSheets, the Inspector should reflect it immediately
-         (call EditorInterface.edit_resource() or emit changed signal).
-         When the Inspector modifies the same resource, GoSheets should refresh the row
-         on the next filesystem_changed or via a deferred reload (similar to the existing
-         250 ms debounce pattern). Keep them visually consistent.
+Remaining Stage 2
+------------------
+[ ] 2.5  Resource reference picker — PROPERTY_HINT_RESOURCE_TYPE cell shows
+         a button that opens EditorInterface's built-in resource picker dialog.
+[ ] 2.6  Inline range slider — for PROPERTY_HINT_RANGE fields where the
+         column is wide enough, show a compact HSlider alongside the value.
+         (SpinBox already works; slider is additive.)
+[ ] 2.7  Array / Dictionary cells — show "[N items]" summary; click to open
+         a mini sub-editor popup.
+[ ] 2.8  Dirty-state indicator — tint unsaved rows; auto-save on focus loss.
+[ ] 2.9  Keyboard navigation — Tab/Shift-Tab between cells; Enter confirms;
+         Escape cancels edit.
+[ ] 2.3  Multi-cell edit — select multiple rows (Shift/Ctrl+click) and batch-
+         edit a shared property; single undo action for the whole batch.
+[ ] 2.10 Inline embed (future) — instead of popup, render the edit control
+         directly inside the row at the clicked cell's position.
 
-[ ] 2-C  Preserve Undo/Redo history for all grid edits  ← CRITICAL
-         Every cell write must be wrapped in EditorUndoRedoManager:
-           undo_redo.create_action("Edit <ResourceType>.<property>")
-           undo_redo.add_do_property(resource, property, new_value)
-           undo_redo.add_undo_property(resource, property, old_value)
-           undo_redo.commit_action()
-         Batch multi-cell edits into a single undo action.
-         Resource must also be saved (ResourceSaver) as part of the do/undo.
+Stage 3 — Resource lifecycle
+------------------------------
+[ ] 3.1  New resource — toolbar button; file-path chooser; adds row to grid.
+[ ] 3.2  Duplicate resource — copy to new file; deep vs shallow option.
+[ ] 3.3  Delete resource — confirmation dialog; OS.move_to_trash; undo-able.
+[ ] 3.4  Rename / move — inline rename; updates uid:// references.
+[ ] 3.5  Bulk create — N new resources from a template; auto-increment names.
 
-
-Already fixed (committed)
---------------------------
-[x] Context menu opened at wrong screen on multi-monitor setups
-    → Now uses DisplayServer.mouse_get_position() for correct screen-global placement.
-
-[x] Enum fields displayed as raw integers instead of enum names
-    → _format_value now resolves PROPERTY_HINT_ENUM via hint_string.
+Stage 4 (later)
+----------------
+[ ] 4.1  Column picker panel (show/hide with checkboxes, grouped by @export_group)
+[ ] 4.2  Column pinning (freeze left columns)
+[ ] 4.4  Computed/derived columns (read-only GDScript expression)
+[ ] 4.5  Nested resource expansion (sub-columns, depth-limited)
