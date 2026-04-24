@@ -25,8 +25,9 @@ signal cell_value_changed(
 		new_value: Variant)
 
 # Self-preload
-const _GRID_ROW_SCRIPT  := preload("res://addons/go_sheets/grid/grid_row.gd")
-const _CELL_EDITOR_SCRIPT := preload("res://addons/go_sheets/grid/cell_editor.gd")
+const _COLUMN_MODEL_SCRIPT := preload("res://addons/go_sheets/grid/column_model.gd")
+const _GRID_ROW_SCRIPT     := preload("res://addons/go_sheets/grid/grid_row.gd")
+const _CELL_EDITOR_SCRIPT  := preload("res://addons/go_sheets/grid/cell_editor.gd")
 
 # ── Layout constants ──────────────────────────────────────────────────────────
 const ROW_HEIGHT      := 24
@@ -37,6 +38,10 @@ const RESIZE_ZONE_PX  := 6    # px from a column's right edge that triggers resi
 
 ## Set to true (via the panel’s Debug toggle) to print layout diagnostics.
 var debug_mode: bool = false
+
+# Edit navigation state
+var _edit_row: int = -1
+var _edit_col: int = -1
 
 # ── State ─────────────────────────────────────────────────────────────────────
 var _column_model: ColumnModel
@@ -159,6 +164,7 @@ func _build_ui() -> void:
 
 	_cell_editor = _CELL_EDITOR_SCRIPT.new()
 	_cell_editor.value_committed.connect(_on_cell_value_committed)
+	_cell_editor.tab_pressed.connect(_on_cell_tab_pressed)
 	add_child(_cell_editor)
 
 
@@ -369,6 +375,7 @@ func _populate_rows() -> void:
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.row_clicked.connect(_on_row_clicked)
 		row.cell_edit_requested.connect(_on_cell_edit_requested)
+		row.edit_requested.connect(_on_row_edit_requested)
 		_content.add_child(row)
 		row._ensure_setup()  # explicit: _ready() may still be deferred
 
@@ -390,16 +397,14 @@ func _populate_rows() -> void:
 # Private — interaction
 # ---------------------------------------------------------------------------
 
-func _on_row_clicked(row_index: int) -> void:
-	_selected_index = row_index
-	_populate_rows()   # re-render to update highlight
-	if row_index >= 0 and row_index < _resources.size():
-		row_selected.emit(_resources[row_index])
+## Open the cell editor at a specific row and visible column index.
+func open_editor_at(row_index: int, col_index: int) -> void:
+	_edit_row = row_index
+	_edit_col = col_index
+	_open_editor_at(row_index, col_index)
 
 
-## Called when the user double-clicks a cell.
-## Opens the CellEditor popup positioned over the clicked cell.
-func _on_cell_edit_requested(row_index: int, col_index: int) -> void:
+func _open_editor_at(row_index: int, col_index: int) -> void:
 	if _column_model == null:
 		return
 	if row_index < 0 or row_index >= _resources.size():
@@ -410,9 +415,6 @@ func _on_cell_edit_requested(row_index: int, col_index: int) -> void:
 	var col: ColumnDef = vis[col_index]
 	var resource: Resource = _resources[row_index]
 
-	# Compute screen-space rect for the cell.
-	# _content rows are inside the ScrollContainer; get_screen_transform() is
-	# the reliable way to find the cell's actual screen position.
 	var row_node: GridRow = _content.get_child(row_index) as GridRow
 	if row_node == null:
 		return
@@ -424,6 +426,58 @@ func _on_cell_edit_requested(row_index: int, col_index: int) -> void:
 		ROW_HEIGHT
 	)
 	_cell_editor.open(resource, col, cell_rect)
+
+
+func _on_row_clicked(row_index: int) -> void:
+	_selected_index = row_index
+	_populate_rows()   # re-render to update highlight
+	if row_index >= 0 and row_index < _resources.size():
+		row_selected.emit(_resources[row_index])
+
+
+## Called when the user double-clicks a cell.
+## Opens the CellEditor popup positioned over the clicked cell.
+func _on_cell_edit_requested(row_index: int, col_index: int) -> void:
+	_edit_row = row_index
+	_edit_col = col_index
+	_open_editor_at(row_index, col_index)
+
+
+func _on_row_edit_requested(row_index: int, col_index: int, is_shift: bool) -> void:
+	_edit_row = row_index
+	_edit_col = col_index
+	# For Tab navigation, commit and move to next cell.
+	if is_shift or true:
+		# Always open the editor; Tab navigation happens via tab_pressed from CellEditor.
+		_open_editor_at(row_index, col_index)
+
+
+func _on_cell_tab_pressed(is_shift: bool) -> void:
+	if _edit_row < 0 or _edit_col < 0:
+		return
+	var vis := _column_model.visible_columns() if _column_model else []
+	if vis.is_empty():
+		return
+
+	# Compute next cell.
+	var next_col: int = _edit_col + (1 if not is_shift else -1)
+	var next_row: int = _edit_row
+
+	# Wrap at column edges.
+	if next_col >= vis.size():
+		next_col = 0
+		next_row += 1
+	elif next_col < 0:
+		next_col = vis.size() - 1
+		next_row -= 1
+
+	# Clamp to data range.
+	if next_row < 0 or next_row >= _resources.size():
+		return
+
+	_edit_col = next_col
+	_edit_row = next_row
+	_open_editor_at(_edit_row, _edit_col)
 
 
 ## Relay the committed value out to GoSheetsPanel.

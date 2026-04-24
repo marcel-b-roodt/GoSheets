@@ -24,8 +24,9 @@ Remaining Stage 2
 [ ] 2.7  Array / Dictionary cells — show "[N items]" summary; click to open
          a mini sub-editor popup.
 [ ] 2.8  Dirty-state indicator — tint unsaved rows; auto-save on focus loss.
-[ ] 2.9  Keyboard navigation — Tab/Shift-Tab between cells; Enter confirms;
-         Escape cancels edit.
+[x] 2.9  Keyboard navigation — Enter/F2 open edit mode; Tab/Shift+Tab navigate
+          cells; Escape cancels edit. ✅ Core wired up; Tab focus leak unresolved
+          (Stage 2.8 in feature-registry updated).
 [ ] 2.3  Multi-cell edit — select multiple rows (Shift/Ctrl+click) and batch-
          edit a shared property; single undo action for the whole batch.
 [ ] 2.10 Inline embed (future) — instead of popup, render the edit control

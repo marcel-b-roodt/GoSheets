@@ -41,7 +41,7 @@ The single source of truth for every feature's status. Updated after each task s
 | 2.5 | Resource reference picker | 📋 Planned |
 | 2.6 | Array property cells | 📋 Planned |
 | 2.7 | Dirty-state indicator + auto-save option | 📋 Planned |
-| 2.8 | Keyboard navigation | 📋 Planned |
+| 2.8 | Keyboard navigation | ✅ Core wired: Enter/F2 open cell; Tab/Shift+Tab navigate; Escape cancels. Tab focus-leak to Godot editor unresolved (needs focus capture via `_input` override in grid). |
 
 ## Stage 3 — Resource Lifecycle
 

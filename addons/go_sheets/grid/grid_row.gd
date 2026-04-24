@@ -9,6 +9,7 @@ class_name GridRow
 extends Control
 
 signal row_clicked(row_index: int)
+signal edit_requested(row_index: int, col_index: int)
 ## Emitted on double-click.  [param col_index] is the index into the
 ## *visible* columns array, matching the column under the cursor.
 signal cell_edit_requested(row_index: int, col_index: int)
@@ -171,6 +172,11 @@ func _col_index_at(local_x: float) -> int:
 	return -1
 
 
+## Programmatic request to open the cell editor for a given visible column.
+func request_edit(col_index: int) -> void:
+	cell_edit_requested.emit(_index, col_index)
+
+
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mbe := event as InputEventMouseButton
@@ -183,3 +189,27 @@ func _on_gui_input(event: InputEvent) -> void:
 				if ci >= 0:
 					cell_edit_requested.emit(_index, ci)
 				accept_event()
+		return
+
+	if event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_ENTER, KEY_KP_ENTER, KEY_F2:
+				_open_edited()
+				accept_event()
+			KEY_TAB:
+				# Bubble up to ResourceGrid via edit_requested, which also carries
+				# the shift state so the grid can decide to commit-and-navigate.
+				_open_edited(event.shift)
+				accept_event()
+
+
+func _open_edited(is_shift: bool = false) -> void:
+	var ci: int = -1
+	if _bound_columns.size() > 0 and _index >= 0:
+		# Use the first visible column by default; sub-class can refine.
+		for i in _bound_columns.size():
+			if not _bound_columns[i].collapsed:
+				ci = i
+				break
+	if ci >= 0:
+		edit_requested.emit(_index, ci, is_shift)

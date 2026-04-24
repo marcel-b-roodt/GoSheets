@@ -29,6 +29,9 @@ signal value_committed(
 		old_value: Variant,
 		new_value: Variant)
 
+## Emitted when Tab is pressed — consumer should commit and move focus.
+signal tab_pressed(is_shift: bool)
+
 const _MIN_WIDTH := 120
 const _MIN_HEIGHT := 28
 
@@ -47,6 +50,26 @@ func _ready() -> void:
 	transparent_bg = false
 	exclusive = false
 	close_requested.connect(_on_close_requested)
+
+
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_ESCAPE:
+				_cancel()
+			KEY_TAB:
+				_commit()
+				tab_pressed.emit(event.shift_pressed)
+
+
+func _cancel() -> void:
+	hide()
+
+
+func _write_old_value() -> void:
+	pass
 
 
 # ---------------------------------------------------------------------------
