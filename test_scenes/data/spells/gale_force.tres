@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="SpellMetadata" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SpellMetadata" format=3 uid="uid://bsc3ycalq0nfb"]
 
-[ext_resource type="Script" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
+[ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -9,4 +9,3 @@ description = "Summon a powerful burst of wind that knocks back all nearby enemi
 mana_cost = 15
 cooldown = 4.0
 element = 4
-is_unlocked = true

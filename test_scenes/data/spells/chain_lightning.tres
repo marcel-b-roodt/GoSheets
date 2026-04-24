@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="SpellMetadata" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SpellMetadata" format=3 uid="uid://bjtgd702w1qqw"]
 
-[ext_resource type="Script" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
+[ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -9,4 +9,3 @@ description = "Call down a bolt of lightning that leaps between up to four enemi
 mana_cost = 45
 cooldown = 3.5
 element = 2
-is_unlocked = true

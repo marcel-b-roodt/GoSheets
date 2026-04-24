@@ -2,9 +2,8 @@
 .godot/
 /android/
 
-# GdUnit4 — tracked as a git submodule at addons/gdUnit4.
-# The submodule itself is committed; only its cache artefacts are ignored.
-addons/gdUnit4/.godot/
+# GdUnit4
+addons/gdUnit4/
 
 # Godot-generated UID sidecar files and import cache
 *.uid
