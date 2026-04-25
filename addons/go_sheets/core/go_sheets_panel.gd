@@ -287,7 +287,9 @@ func _on_cell_value_changed(
 	if resource == null or _undo_redo == null:
 		return
 	# No-op if nothing actually changed.
-	if old_value == new_value:
+	# Guard with typeof first — Godot 4 throws a runtime error comparing
+	# different Variant types (e.g. int == String) with ==.
+	if typeof(old_value) == typeof(new_value) and old_value == new_value:
 		return
 
 	var label := "Edit %s.%s" % [resource.get_class(), property]

@@ -38,10 +38,23 @@ static func build(type_name: StringName, saved_dicts: Array = []) -> ColumnModel
 				)
 			)
 	else:
-		# Restore saved layout, then append any new properties not yet in layout
+		# Restore saved layout, then append any new properties not yet in layout.
+		# Always refresh type metadata (hint, hint_string, property_type) from the
+		# live property info so stale saved values (e.g. an old @export_range that
+		# was removed from the script) cannot incorrectly affect the editor UI.
+		var prop_info: Dictionary = {}
+		for prop: Dictionary in raw_props:
+			prop_info[prop.name] = prop
+
 		var seen: Dictionary = {}
 		for d: Dictionary in saved_dicts:
 			var col: ColumnDef = _COLUMN_DEF_SCRIPT.from_dict(d)
+			# Overwrite type metadata with current live definition.
+			if prop_info.has(col.property_name):
+				var live: Dictionary = prop_info[col.property_name]
+				col.property_type = live.type
+				col.hint          = live.hint
+				col.hint_string   = live.hint_string
 			model.columns.append(col)
 			seen[col.property_name] = true
 		for prop: Dictionary in raw_props:

@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="Spellbook" format=3 uid="uid://vqi73jtvfn5p"]
 
 [ext_resource type="Script" uid="uid://bk1kbgao3rho1" path="res://test_scenes/resources/spellbook.gd" id="1"]
-[ext_resource type="Resource" path="res://test_scenes/data/spells/fireball.tres" id="2"]
+[ext_resource type="Resource" uid="uid://ce5hpkqatrhty" path="res://test_scenes/data/spells/fireball.tres" id="2"]
 [ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="2_lbivk"]
 [ext_resource type="Resource" path="res://test_scenes/data/spells/ice_shard.tres" id="3"]
-[ext_resource type="Resource" path="res://test_scenes/data/spells/chain_lightning.tres" id="4"]
+[ext_resource type="Resource" uid="uid://bjtgd702w1qqw" path="res://test_scenes/data/spells/chain_lightning.tres" id="4"]
 [ext_resource type="Resource" path="res://test_scenes/data/spells/stone_wall.tres" id="5"]
-[ext_resource type="Resource" path="res://test_scenes/data/spells/gale_force.tres" id="6"]
-[ext_resource type="Resource" path="res://test_scenes/data/spells/arcane_missile.tres" id="7"]
+[ext_resource type="Resource" uid="uid://bsc3ycalq0nfb" path="res://test_scenes/data/spells/gale_force.tres" id="6"]
+[ext_resource type="Resource" uid="uid://dn47yhvjkedy2" path="res://test_scenes/data/spells/arcane_missile.tres" id="7"]
 
 [resource]
 script = ExtResource("1")

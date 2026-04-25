@@ -143,3 +143,37 @@ func test_build_from_resource_returns_model() -> void:
 	# that's valid; we just check it doesn't crash.
 	var model := ColumnModel.build(&"Resource", [])
 	assert_object(model).is_not_null()
+
+
+# ---------------------------------------------------------------------------
+# ColumnModel — hint refresh from live definition
+# ---------------------------------------------------------------------------
+
+func test_plain_int_column_has_no_range_hint() -> void:
+	# SpellMetadata.mana_cost is a plain @export var int — no @export_range.
+	# A freshly built model must have PROPERTY_HINT_NONE for that column.
+	var model := ColumnModel.build(&"SpellMetadata", [])
+	var col = null
+	for c in model.columns:
+		if c.property_name == &"mana_cost":
+			col = c
+			break
+	assert_object(col).is_not_null()
+	assert_int(col.hint).is_equal(PROPERTY_HINT_NONE)
+
+
+func test_stale_range_hint_overwritten_by_live_definition() -> void:
+	# Simulate a saved layout where mana_cost erroneously has PROPERTY_HINT_RANGE
+	# (e.g. leftover from a previous session when @export_range was present).
+	# After build(), the hint must reflect the current script — PROPERTY_HINT_NONE.
+	var stale := ColumnDef.new(&"mana_cost", TYPE_INT, PROPERTY_HINT_RANGE, "0,200,1")
+	var saved := [stale.to_dict()]
+	var model := ColumnModel.build(&"SpellMetadata", saved)
+	var col = null
+	for c in model.columns:
+		if c.property_name == &"mana_cost":
+			col = c
+			break
+	assert_object(col).is_not_null()
+	assert_int(col.hint).is_equal(PROPERTY_HINT_NONE)
+	assert_str(col.hint_string).is_equal("")

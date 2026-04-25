@@ -163,6 +163,7 @@ func _build_ui() -> void:
 	add_child(_context_menu)
 
 	_cell_editor = _CELL_EDITOR_SCRIPT.new()
+	_cell_editor.debug_mode = debug_mode
 	_cell_editor.value_committed.connect(_on_cell_value_committed)
 	_cell_editor.tab_pressed.connect(_on_cell_tab_pressed)
 	add_child(_cell_editor)
@@ -210,18 +211,26 @@ func _rebuild_header() -> void:
 		_header_bar.add_child(bg)
 
 		if not col.collapsed:
-			var sort_suffix := ""
-			if _sort_column == i:
-				sort_suffix = "  ▲" if _sort_dir == 1 else "  ▼"
-
 			var lbl := Label.new()
 			lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			lbl.position = Vector2(x + 6, 0)
-			lbl.size = Vector2(eff_w - 12, HEADER_HEIGHT)
+			# Reserve room for sort chevron so it doesn't get clipped.
+			var text_right_pad := 20 if _sort_column == i else 12
+			lbl.size = Vector2(maxf(0.0, float(eff_w - text_right_pad - 6)), HEADER_HEIGHT)
 			lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			lbl.clip_text = true
-			lbl.text = col.display_name + sort_suffix
+			lbl.text = col.display_name
 			_header_bar.add_child(lbl)
+
+			if _sort_column == i:
+				var chevron := Label.new()
+				chevron.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				chevron.position = Vector2(x + eff_w - 23, 0)
+				chevron.size = Vector2(12, HEADER_HEIGHT)
+				chevron.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				chevron.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+				chevron.text = "▲" if _sort_dir == 1 else "▼"
+				_header_bar.add_child(chevron)
 
 
 # ---------------------------------------------------------------------------
@@ -425,6 +434,7 @@ func _open_editor_at(row_index: int, col_index: int) -> void:
 		col.width,
 		ROW_HEIGHT
 	)
+	_cell_editor.debug_mode = debug_mode
 	_cell_editor.open(resource, col, cell_rect)
 
 
@@ -458,24 +468,38 @@ func _on_cell_tab_pressed(is_shift: bool) -> void:
 	var vis := _column_model.visible_columns() if _column_model else []
 	if vis.is_empty():
 		return
+	var editable_cols: Array[int] = []
+	for i in vis.size():
+		if not vis[i].collapsed:
+			editable_cols.append(i)
+	if editable_cols.is_empty():
+		return
+
+	var pos: int = editable_cols.find(_edit_col)
+	if pos < 0:
+		# Fallback: if current index is stale (e.g. column was collapsed),
+		# start from the first editable column.
+		pos = 0
 
 	# Compute next cell.
-	var next_col: int = _edit_col + (1 if not is_shift else -1)
+	var next_pos: int = pos + (1 if not is_shift else -1)
 	var next_row: int = _edit_row
 
 	# Wrap at column edges.
-	if next_col >= vis.size():
-		next_col = 0
+	if next_pos >= editable_cols.size():
+		next_pos = 0
 		next_row += 1
-	elif next_col < 0:
-		next_col = vis.size() - 1
+	elif next_pos < 0:
+		next_pos = editable_cols.size() - 1
 		next_row -= 1
 
-	# Clamp to data range.
-	if next_row < 0 or next_row >= _resources.size():
-		return
+	# Keep traversal inside GoSheets even at dataset boundaries.
+	if next_row >= _resources.size():
+		next_row = 0
+	elif next_row < 0:
+		next_row = _resources.size() - 1
 
-	_edit_col = next_col
+	_edit_col = editable_cols[next_pos]
 	_edit_row = next_row
 	_open_editor_at(_edit_row, _edit_col)
 

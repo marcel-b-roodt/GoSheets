@@ -86,6 +86,7 @@ Fine-grained control over which properties are shown and how.
 | 4.1 | Column picker panel — checkboxes for every available property; grouped by `@export_group` / `@export_subgroup` | |
 | 4.2 | Column pinning — pin 1–N columns to the left (like Excel freeze pane) | Useful for name/id columns |
 | 4.3 | Column width — manual drag resize; double-click to auto-fit | ✅ Drag handle implemented; double-click auto-fit planned |
+| 4.3b | Double-click divider auto-fit (QoL) — in Sheets view, double-click a divider to size the column to its visible content/header, clamped to a max width cap | Prevents very long content from creating overly wide columns |
 | 4.3a | Column collapse — click ◀ in header to collapse to 16px strip with tooltip; click ▶ to expand; ⊞ to expand all | ✅ |
 | 4.4 | Computed / derived columns — user-defined GDScript expression per column (e.g. `damage * speed`) | Read-only; expression sandbox |
 | 4.5 | Nested resource expansion — expand a `Resource` reference cell to show its own properties as sub-columns | Depth-limited (max 2) |

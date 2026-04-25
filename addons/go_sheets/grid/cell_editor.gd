@@ -32,8 +32,21 @@ signal value_committed(
 ## Emitted when Tab is pressed — consumer should commit and move focus.
 signal tab_pressed(is_shift: bool)
 
-const _MIN_WIDTH := 120
-const _MIN_HEIGHT := 28
+# Self-preloads — ColumnDef is used as a compile-time type annotation in
+# class-level vars and function signatures, so it must be preloaded here to
+# ensure Godot can compile this script regardless of scan order.
+const _COLUMN_DEF_SCRIPT     := preload("res://addons/go_sheets/grid/column_def.gd")
+const _STRING_CELL_FIELD     := preload("res://addons/go_sheets/cells/string_cell_field.gd")
+const _NUMERIC_CELL_FIELD    := preload("res://addons/go_sheets/cells/numeric_cell_field.gd")
+const _BOOL_CELL_FIELD       := preload("res://addons/go_sheets/cells/bool_cell_field.gd")
+const _ENUM_CELL_FIELD       := preload("res://addons/go_sheets/cells/enum_cell_field.gd")
+const _COLOR_CELL_FIELD      := preload("res://addons/go_sheets/cells/color_cell_field.gd")
+
+const _MIN_WIDTH             := 48
+const _POPUP_PADDING         := 4
+
+## When true, print popup sizing diagnostics.
+var debug_mode: bool = false
 
 # Current edit context
 var _resource: Resource
@@ -44,11 +57,16 @@ var _old_value: Variant
 # The single active editor control (swapped per type)
 var _inner: Control
 
+# Prevent double-commit when focus_exited fires after Tab/Enter commit
+var _committed: bool = false
+
 
 func _ready() -> void:
 	# PopupPanel defaults — borderless, auto-close on focus loss.
 	transparent_bg = false
 	exclusive = false
+	# We size explicitly in open() so all fields match cell bounds consistently.
+	wrap_controls = false
 	close_requested.connect(_on_close_requested)
 
 
@@ -58,8 +76,10 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
 			KEY_ESCAPE:
+				get_viewport().set_input_as_handled()
 				_cancel()
 			KEY_TAB:
+				get_viewport().set_input_as_handled()
 				_commit()
 				tab_pressed.emit(event.shift_pressed)
 
@@ -70,6 +90,19 @@ func _cancel() -> void:
 
 func _write_old_value() -> void:
 	pass
+
+
+func _commit_deferred_if_focus_left() -> void:
+	_commit_if_focus_left.call_deferred()
+
+
+func _commit_if_focus_left() -> void:
+	if not visible or _committed or _inner == null:
+		return
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	if focus_owner != null and (focus_owner == _inner or _inner.is_ancestor_of(focus_owner)):
+		return
+	_commit()
 
 
 # ---------------------------------------------------------------------------
@@ -86,15 +119,63 @@ func open(
 	_property   = col.property_name
 	_col        = col
 	_old_value  = resource.get(_property)
+	_committed  = false
 
 	_rebuild_inner(col, _old_value)
 
-	var w := maxi(screen_rect.size.x, _MIN_WIDTH)
-	var h := maxi(screen_rect.size.y, _MIN_HEIGHT)
-	size = Vector2i(w, h)
+	# Set position first, then show popup, then size it after layout settles.
+	# This ensures PopupPanel doesn't override our size during popup() startup sequence.
 	position = screen_rect.position
 	popup()
-	_focus_inner()
+
+	# Now apply sizing after popup is visible and layout is ready.
+	# Defer one frame to ensure Godot has computed child sizes.
+	_apply_popup_size.call_deferred(screen_rect)
+	_focus_inner.call_deferred()
+
+
+func _apply_popup_size(screen_rect: Rect2i) -> void:
+	# Explicit sizing keeps popup dimensions stable and per-cell.
+	# Width follows the column width exactly (with a tiny floor), while height
+	# starts at row height and expands to fit the editor content (slider rows, etc.).
+	var popup_w := maxi(screen_rect.size.x, _MIN_WIDTH)
+	var content_h := screen_rect.size.y
+	var min_h := screen_rect.size.y
+	var inner_min_size := Vector2.ZERO
+	if _inner != null:
+		inner_min_size = _inner.get_combined_minimum_size()
+		min_h = int(ceil(inner_min_size.y)) + (_POPUP_PADDING * 2)
+		content_h = maxi(screen_rect.size.y, min_h)  # At least row height, expand if needed
+
+		size = Vector2i(popup_w, content_h)
+		_inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_inner.offset_left = _POPUP_PADDING
+		_inner.offset_top = _POPUP_PADDING
+		_inner.offset_right = -_POPUP_PADDING
+		_inner.offset_bottom = -_POPUP_PADDING
+	else:
+		size = Vector2i(popup_w, screen_rect.size.y)
+
+	if debug_mode:
+		print("CellEditor._apply_popup_size:")
+		print("  screen_rect: %s" % screen_rect)
+		print("  inner min_size: %s" % inner_min_size)
+		print("  calculated min_h (inner + padding): %d" % min_h)
+		print("  row height: %d" % screen_rect.size.y)
+		print("  final content_h: %d" % content_h)
+		print("  popup size being set to: (%d, %d)" % [popup_w, content_h])
+		_print_popup_size_debug.call_deferred(screen_rect)
+
+
+func _print_popup_size_debug(screen_rect: Rect2i) -> void:
+	if not debug_mode:
+		return
+	var inner_size := _inner.size if _inner != null else Vector2.ZERO
+	print("CellEditor._post_layout_size:")
+	print("  popup position: %s" % position)
+	print("  popup size now: %s" % size)
+	print("  expected row rect: %s" % screen_rect)
+	print("  inner size now: %s" % inner_size)
 
 
 # ---------------------------------------------------------------------------
@@ -103,122 +184,72 @@ func open(
 
 func _rebuild_inner(col: ColumnDef, current: Variant) -> void:
 	# Remove previous inner control if any.
+	# Block signals before freeing to prevent stale focus_exited / value_changed
+	# from firing after _committed has been reset for the next cell (tab navigation).
 	if _inner != null:
+		_inner.set_block_signals(true)
 		_inner.queue_free()
 		_inner = null
 
+	# Create the appropriate CellField subclass based on property type and hints.
 	if col.hint == PROPERTY_HINT_ENUM and col.property_type == TYPE_INT:
-		_inner = _make_option_button(col.hint_string, int(current) if current != null else 0)
+		var field := _ENUM_CELL_FIELD.new()
+		field.populate(col.hint_string)
+		field.set_value(int(current) if current != null else 0)
+		_inner = field
 	else:
 		match col.property_type:
 			TYPE_BOOL:
-				_inner = _make_check_box(bool(current) if current != null else false)
+				var field := _BOOL_CELL_FIELD.new()
+				field.set_value(bool(current) if current != null else false)
+				_inner = field
 			TYPE_INT:
-				_inner = _make_spin_box(col, float(current) if current != null else 0.0, true)
+				var field := _NUMERIC_CELL_FIELD.new()
+				field.setup(col, float(current) if current != null else 0.0, true)
+				_inner = field
 			TYPE_FLOAT:
-				_inner = _make_spin_box(col, float(current) if current != null else 0.0, false)
+				var field := _NUMERIC_CELL_FIELD.new()
+				field.setup(col, float(current) if current != null else 0.0, false)
+				_inner = field
 			TYPE_COLOR:
-				_inner = _make_color_picker(current if current is Color else Color.WHITE)
+				var field := _COLOR_CELL_FIELD.new()
+				field.set_value(current if current is Color else Color.WHITE)
+				_inner = field
 			TYPE_STRING, TYPE_STRING_NAME:
-				_inner = _make_line_edit(str(current) if current != null else "")
+				var field := _STRING_CELL_FIELD.new()
+				field.set_value(str(current) if current != null else "")
+				_inner = field
 			_:
 				# Unsupported type — close immediately rather than show an empty popup.
 				return
 
 	if _inner != null:
-		_inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_inner.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 		add_child(_inner)
+		# Wire the field's value_changed signal to our commit handler.
+		if _inner.has_signal("value_changed"):
+			_inner.value_changed.connect(func(new_value: Variant) -> void:
+				if _committed:
+					return
+				_committed = true
+				value_committed.emit(_resource, _property, _old_value, new_value)
+				hide()
+			)
 
 
-func _make_line_edit(text: String) -> LineEdit:
-	var le := LineEdit.new()
-	le.text = text
-	le.select_all_on_focus = true
-	le.text_submitted.connect(func(_t: String) -> void: _commit())
-	return le
-
-
-func _make_spin_box(col: ColumnDef, value: float, is_int: bool) -> SpinBox:
-	var sb := SpinBox.new()
-	sb.step = 1.0 if is_int else 0.001
-	sb.min_value = -1e9
-	sb.max_value = 1e9
-	if col.hint == PROPERTY_HINT_RANGE and col.hint_string != "":
-		_apply_range_hint(sb, col.hint_string, is_int)
-	sb.value = value
-	sb.rounded = is_int
-	# Confirm on Enter in the embedded LineEdit.
-	sb.get_line_edit().text_submitted.connect(func(_t: String) -> void: _commit())
-	return sb
-
-
-func _apply_range_hint(sb: SpinBox, hint_string: String, is_int: bool) -> void:
-	# hint_string format: "min,max" or "min,max,step" or "min,max,step,suffix"
-	var parts := hint_string.split(",", false)
-	if parts.size() >= 1:
-		sb.min_value = float(parts[0])
-	if parts.size() >= 2:
-		sb.max_value = float(parts[1])
-	if parts.size() >= 3:
-		sb.step = float(parts[2])
-	if is_int:
-		sb.rounded = true
-
-
-func _make_check_box(checked: bool) -> CheckBox:
-	var cb := CheckBox.new()
-	cb.button_pressed = checked
-	cb.text = "Enabled" if checked else "Disabled"
-	cb.toggled.connect(func(on: bool) -> void: cb.text = "Enabled" if on else "Disabled")
-	# Commit immediately on toggle.
-	cb.toggled.connect(func(_on: bool) -> void: _commit())
-	return cb
-
-
-func _make_option_button(hint_string: String, selected_idx: int) -> OptionButton:
-	var ob := OptionButton.new()
-	_populate_option_button(ob, hint_string)
-	# Clamp selected index to valid range.
-	if ob.item_count > 0:
-		ob.selected = clampi(selected_idx, 0, ob.item_count - 1)
-	# Commit immediately on selection change.
-	ob.item_selected.connect(func(_idx: int) -> void: _commit())
-	return ob
-
-
-func _populate_option_button(ob: OptionButton, hint_string: String) -> void:
-	# hint_string: "Name,Name:int,Name" — each entry may carry an explicit value.
-	var entries := hint_string.split(",", false)
-	var auto_val := 0
-	for entry: String in entries:
-		var colon := entry.find(":")
-		if colon >= 0:
-			var display := entry.left(colon)
-			var val := int(entry.substr(colon + 1))
-			ob.add_item(display, val)
-			auto_val = val + 1
-		else:
-			ob.add_item(entry, auto_val)
-			auto_val += 1
-
-
-func _make_color_picker(color: Color) -> ColorPickerButton:
-	var cpb := ColorPickerButton.new()
-	cpb.color = color
-	cpb.custom_minimum_size = Vector2(80, 0)
-	# Commit when the picker popup closes.
-	cpb.popup_closed.connect(func() -> void: _commit())
-	return cpb
+## Delegate to CellField.get_value() to read the current editor value.
+func _read_inner() -> Variant:
+	if _inner == null:
+		return _old_value
+	if _inner.has_method("get_value"):
+		return _inner.get_value()
+	return _old_value
 
 
 func _focus_inner() -> void:
 	if _inner == null:
 		return
-	# For SpinBox, focus the inner LineEdit so keyboard works immediately.
-	if _inner is SpinBox:
-		(_inner as SpinBox).get_line_edit().grab_focus()
-		(_inner as SpinBox).get_line_edit().select_all()
+	if _inner.has_method("focus_main"):
+		_inner.focus_main()
 	else:
 		_inner.grab_focus()
 
@@ -228,32 +259,16 @@ func _focus_inner() -> void:
 # ---------------------------------------------------------------------------
 
 func _commit() -> void:
-	if _inner == null or _resource == null:
+	if _resource == null or _committed:
 		hide()
 		return
+	_committed = true
 	var new_value: Variant = _read_inner()
 	# Always emit — panel decides whether old==new is a no-op worth an undo step.
 	value_committed.emit(_resource, _property, _old_value, new_value)
 	hide()
 
 
-func _read_inner() -> Variant:
-	if _inner is LineEdit:
-		var t: String = (_inner as LineEdit).text
-		return StringName(t) if _col.property_type == TYPE_STRING_NAME else t
-	if _inner is SpinBox:
-		var raw := (_inner as SpinBox).value
-		return int(raw) if _col.property_type == TYPE_INT else raw
-	if _inner is CheckBox:
-		return (_inner as CheckBox).button_pressed
-	if _inner is OptionButton:
-		var ob := _inner as OptionButton
-		return ob.get_item_id(ob.selected) if ob.selected >= 0 else _old_value
-	if _inner is ColorPickerButton:
-		return (_inner as ColorPickerButton).color
-	return _old_value
-
-
 func _on_close_requested() -> void:
-	# User closed without confirming (e.g. Escape / click outside).
-	hide()
+	# Treat closing the popup as accepting the current value.
+	_commit()

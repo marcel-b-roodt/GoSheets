@@ -21,7 +21,7 @@ enum Element {
 ## Full flavour/mechanical description.
 @export_multiline var description: String = ""
 ## Base mana cost to cast.
-@export_range(0, 200, 1) var mana_cost: int = 0
+@export var mana_cost: int = 0
 ## Seconds before the spell can be cast again.
 @export_range(0.0, 30.0, 0.1) var cooldown: float = 1.0
 ## Elemental affinity.

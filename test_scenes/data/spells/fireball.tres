@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="SpellMetadata" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SpellMetadata" format=3 uid="uid://ce5hpkqatrhty"]
 
-[ext_resource type="Script" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
+[ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -9,4 +9,3 @@ description = "Hurl a blazing ball of fire that scorches everything in its path.
 mana_cost = 30
 cooldown = 2.0
 element = 0
-is_unlocked = true

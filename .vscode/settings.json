@@ -18,6 +18,9 @@
             "matchCommandLine": true
         },
         "git submodule": true,
-        "git tag": true
+        "git tag": true,
+        "./verify.sh": true,
+        "./scripts/run_tests/run_tests.sh": true,
+        "./run_tests/run_tests.sh": true
     }
 }

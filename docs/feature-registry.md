@@ -34,8 +34,8 @@ The single source of truth for every feature's status. Updated after each task s
 
 | # | Feature | Status |
 |---|---|---|
-| 2.1 | Inline cell editing | 📋 Planned |
-| 2.2 | Undo/redo integration | 📋 Planned |
+| 2.1 | Inline cell editing | 🔧 Popup editor supports string, bool, enum, color, and numeric fields. Range-backed numeric popup editors now show slider + spinbox controls and commit pending values on close; resource picker, arrays, and inline-in-row embedding remain pending. |
+| 2.2 | Undo/redo integration | ✅ Inline cell edits are applied through `EditorUndoRedoManager`, saved to disk, and refreshed back into the grid / Inspector. |
 | 2.3 | Multi-cell batch edit | 📋 Planned |
 | 2.4 | Enum support | 📋 Planned |
 | 2.5 | Resource reference picker | 📋 Planned |
@@ -61,6 +61,7 @@ The single source of truth for every feature's status. Updated after each task s
 | 4.1 | Column picker panel | 📋 Planned |
 | 4.2 | Column pinning | 📋 Planned |
 | 4.3 | Column width resize | 📋 Planned |
+| 4.3b | Divider double-click auto-fit with max-width cap (QoL) | 📋 Planned |
 | 4.4 | Computed / derived columns | 📋 Planned |
 | 4.5 | Nested resource expansion | 📋 Planned |
 | 4.6 | Per-type layout profiles | 📋 Planned |
