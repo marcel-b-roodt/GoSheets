@@ -35,6 +35,10 @@ const HEADER_HEIGHT   := 28
 const COLLAPSED_WIDTH := 16   # width of a collapsed column strip
 const MIN_COL_WIDTH   := 40   # minimum drag-resize width
 const RESIZE_ZONE_PX  := 6    # px from a column's right edge that triggers resize cursor
+const REORDER_DRAG_THRESHOLD_PX := 6.0
+const REORDER_TARGET_FILL_COLOR := Color(0.30, 0.56, 0.95, 0.22)
+const REORDER_TARGET_DIVIDER_COLOR := Color(0.45, 0.72, 1.00, 0.95)
+const REORDER_TARGET_DIVIDER_WIDTH := 2
 
 ## Set to true (via the panel’s Debug toggle) to print layout diagnostics.
 var debug_mode: bool = false
@@ -56,6 +60,12 @@ var _sort_dir: int = 0          # 1 = asc, -1 = desc
 var _drag_col_index: int = -1   # visible-column index being dragged
 var _drag_start_x: float = 0.0  # global mouse x at drag start
 var _drag_start_w: int = 0      # col.width at drag start
+
+# Header reorder drag state
+var _header_press_col: int = -1
+var _header_press_x: float = 0.0
+var _header_press_moved: bool = false
+var _reorder_drop_slot: int = -1
 
 # ── UI nodes ─────────────────────────────────────────────────────────────────
 var _scroll: ScrollContainer
@@ -232,6 +242,8 @@ func _rebuild_header() -> void:
 				chevron.text = "▲" if _sort_dir == 1 else "▼"
 				_header_bar.add_child(chevron)
 
+	_draw_reorder_target(vis)
+
 
 # ---------------------------------------------------------------------------
 # Private — header input (centralised)
@@ -248,38 +260,81 @@ func _on_header_gui_input(event: InputEvent) -> void:
 	var lx: float = (event as InputEventMouse).position.x \
 		if event is InputEventMouse else -1.0
 
-	# ── Ongoing resize drag ───────────────────────────────────────────
-	if _drag_col_index >= 0:
-		if event is InputEventMouseMotion and _drag_col_index < vis.size():
-			var delta := int(lx - _drag_start_x)
-			vis[_drag_col_index].width = maxi(_drag_start_w + delta, MIN_COL_WIDTH)
-			_compute_column_offsets()
-			_rebuild_header()
-			_populate_rows()
-			accept_event()
-			return
-		if event is InputEventMouseButton:
-			var mbe := event as InputEventMouseButton
-			if mbe.button_index == MOUSE_BUTTON_LEFT and not mbe.pressed:
-				_drag_col_index = -1
-				column_layout_changed.emit()
-				accept_event()
-			return
+	if _handle_resize_drag_input(event, vis, lx):
+		return
+	if _handle_reorder_drag_input(event, vis, lx):
+		return
 
-	# ── Hover: cursor + tooltip ────────────────────────────────────────────
 	var rz := _resize_zone_at(lx, vis)
 	var ci := _col_at(lx, vis)
 
-	if event is InputEventMouseMotion:
-		_header_bar.mouse_default_cursor_shape = (
-			Control.CURSOR_HSIZE if rz >= 0 else Control.CURSOR_ARROW
-		)
-		_header_bar.tooltip_text = (
-			vis[ci].display_name if ci >= 0 and vis[ci].collapsed else ""
-		)
+	if _handle_header_hover(event, vis, rz, ci):
 		return
+	_handle_header_click(event, vis, lx, rz, ci)
 
-	# ── Click ───────────────────────────────────────────────────────────────
+
+func _handle_resize_drag_input(event: InputEvent, vis: Array, lx: float) -> bool:
+	if _drag_col_index < 0:
+		return false
+	if event is InputEventMouseMotion and _drag_col_index < vis.size():
+		var delta := int(lx - _drag_start_x)
+		vis[_drag_col_index].width = maxi(_drag_start_w + delta, MIN_COL_WIDTH)
+		_compute_column_offsets()
+		_rebuild_header()
+		_populate_rows()
+		accept_event()
+		return true
+	if event is InputEventMouseButton:
+		var mbe := event as InputEventMouseButton
+		if mbe.button_index == MOUSE_BUTTON_LEFT and not mbe.pressed:
+			_drag_col_index = -1
+			column_layout_changed.emit()
+			accept_event()
+		return true
+	return false
+
+
+func _handle_reorder_drag_input(event: InputEvent, vis: Array, lx: float) -> bool:
+	if _header_press_col < 0:
+		return false
+	if event is InputEventMouseMotion:
+		if absf(lx - _header_press_x) >= REORDER_DRAG_THRESHOLD_PX:
+			_header_press_moved = true
+			var next_slot := _slot_at_x(lx, vis)
+			if next_slot != _reorder_drop_slot:
+				_reorder_drop_slot = next_slot
+				_rebuild_header()
+			_header_bar.mouse_default_cursor_shape = Control.CURSOR_DRAG
+		accept_event()
+		return true
+	if event is InputEventMouseButton:
+		var release := event as InputEventMouseButton
+		if release.button_index == MOUSE_BUTTON_LEFT and not release.pressed:
+			if _header_press_moved:
+				if _apply_column_reorder(_header_press_col, _reorder_drop_slot):
+					_rebuild()
+					column_layout_changed.emit()
+			else:
+				_on_header_clicked(_header_press_col)
+			_clear_header_press_state()
+			accept_event()
+		return true
+	return false
+
+
+func _handle_header_hover(event: InputEvent, vis: Array, rz: int, ci: int) -> bool:
+	if not event is InputEventMouseMotion:
+		return false
+	_header_bar.mouse_default_cursor_shape = (
+		Control.CURSOR_HSIZE if rz >= 0 else Control.CURSOR_ARROW
+	)
+	_header_bar.tooltip_text = (
+		vis[ci].display_name if ci >= 0 and vis[ci].collapsed else ""
+	)
+	return true
+
+
+func _handle_header_click(event: InputEvent, vis: Array, lx: float, rz: int, ci: int) -> void:
 	if not event is InputEventMouseButton:
 		return
 	var mbe := event as InputEventMouseButton
@@ -298,7 +353,10 @@ func _on_header_gui_input(event: InputEvent) -> void:
 				_rebuild()
 				column_layout_changed.emit()
 			else:
-				_on_header_clicked(ci)
+				_header_press_col = ci
+				_header_press_x = lx
+				_header_press_moved = false
+				_reorder_drop_slot = ci
 		accept_event()
 
 	elif mbe.button_index == MOUSE_BUTTON_RIGHT:
@@ -326,6 +384,60 @@ func _col_at(x: float, vis: Array) -> int:
 		if x >= _col_x_offsets[i] and x < _col_x_offsets[i] + eff_w:
 			return i
 	return -1
+
+
+## Returns insertion slot in visible-column space for a drop position.
+## Slot range is 0..vis.size().
+func _slot_at_x(x: float, vis: Array) -> int:
+	for i in vis.size():
+		var eff_w: int = COLLAPSED_WIDTH if vis[i].collapsed else vis[i].width
+		var left: float = _col_x_offsets[i]
+		var midpoint: float = left + (float(eff_w) * 0.5)
+		if x < midpoint:
+			return i
+	return vis.size()
+
+
+func _apply_column_reorder(from_visible_index: int, to_visible_slot: int) -> bool:
+	if _column_model == null:
+		return false
+	return _column_model.move_visible_column_to_slot(from_visible_index, to_visible_slot)
+
+
+func _clear_header_press_state() -> void:
+	_header_press_col = -1
+	_header_press_x = 0.0
+	_header_press_moved = false
+	_reorder_drop_slot = -1
+	_header_bar.mouse_default_cursor_shape = Control.CURSOR_ARROW
+	_rebuild_header()
+
+
+func _draw_reorder_target(vis: Array) -> void:
+	if not _header_press_moved or _reorder_drop_slot < 0:
+		return
+	if _reorder_drop_slot < vis.size():
+		var target_col: ColumnDef = vis[_reorder_drop_slot]
+		var target_x: int = _col_x_offsets[_reorder_drop_slot]
+		var target_w: int = COLLAPSED_WIDTH if target_col.collapsed else target_col.width
+		var fill := ColorRect.new()
+		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fill.position = Vector2(target_x, 1)
+		fill.size = Vector2(maxi(target_w - 1, 1), HEADER_HEIGHT - 1)
+		fill.color = REORDER_TARGET_FILL_COLOR
+		_header_bar.add_child(fill)
+
+	var divider_x := (
+		_total_width
+		if _reorder_drop_slot >= vis.size()
+		else _col_x_offsets[_reorder_drop_slot]
+	)
+	var divider := ColorRect.new()
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	divider.position = Vector2(divider_x - int(REORDER_TARGET_DIVIDER_WIDTH / 2), 0)
+	divider.size = Vector2(REORDER_TARGET_DIVIDER_WIDTH, HEADER_HEIGHT)
+	divider.color = REORDER_TARGET_DIVIDER_COLOR
+	_header_bar.add_child(divider)
 
 
 func _show_column_context_menu(col_idx: int, _global_pos: Vector2) -> void:

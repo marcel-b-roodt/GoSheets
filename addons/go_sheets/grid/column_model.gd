@@ -94,6 +94,41 @@ func to_dicts() -> Array:
 	return out
 
 
+## Move a visible column from [param from_visible_index] to [param to_visible_slot].
+## The slot is in visible-column space and ranges from 0..visible_columns().size().
+## Returns true if the model order changed.
+func move_visible_column_to_slot(from_visible_index: int, to_visible_slot: int) -> bool:
+	var vis := visible_columns()
+	if from_visible_index < 0 or from_visible_index >= vis.size():
+		return false
+
+	var moving: ColumnDef = vis[from_visible_index]
+	var from_model_index: int = columns.find(moving)
+	if from_model_index < 0:
+		return false
+
+	# Clamp slot to the valid insertion range in visible-column space.
+	var clamped_slot: int = mini(maxi(to_visible_slot, 0), vis.size())
+
+	# Convert target slot to model-array insertion index.
+	var target_model_index: int = columns.size()
+	if clamped_slot < vis.size():
+		var target_col: ColumnDef = vis[clamped_slot]
+		target_model_index = columns.find(target_col)
+		if target_model_index < 0:
+			return false
+
+	# No-op when moving before itself or immediately after itself.
+	if target_model_index == from_model_index or target_model_index == from_model_index + 1:
+		return false
+
+	columns.remove_at(from_model_index)
+	if from_model_index < target_model_index:
+		target_model_index -= 1
+	columns.insert(target_model_index, moving)
+	return true
+
+
 # ---------------------------------------------------------------------------
 # Private — property extraction
 # ---------------------------------------------------------------------------

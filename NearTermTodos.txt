@@ -9,11 +9,6 @@ Completed ✅
 [x]      Context menu multi-monitor fix (DisplayServer.mouse_get_position)
 [x]      Enum display names (PROPERTY_HINT_ENUM + hint_string resolution)
 
-Remaining Stage 1
-------------------
-[ ] 1.7  Column reordering — drag a column header left/right to reorder;
-         persist new order in column_layouts.
-
 Remaining Stage 2
 ------------------
 [ ] 2.5  Resource reference picker — PROPERTY_HINT_RESOURCE_TYPE cell shows

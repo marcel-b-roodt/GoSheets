@@ -26,7 +26,7 @@ The single source of truth for every feature's status. Updated after each task s
 | 1.4 | Read-only cell display (all scalar + reference types) | 🔧 Core scalar/resource display is in place; broader type coverage can still expand. |
 | 1.5 | Row selection + Inspector sync | ✅ Selecting a row forwards the resource into Godot's Inspector. |
 | 1.6 | Column visibility toggle | ✅ Visibility/collapse state is implemented and persisted through saved layouts. |
-| 1.7 | Column reordering | 📋 Planned |
+| 1.7 | Column reordering | ✅ Header drag-reorder is implemented and persisted through saved column layouts. |
 | 1.8 | Sort by column | ✅ Header sorting and context-menu sort actions are implemented. |
 | 1.9 | Text search / filter bar | ✅ Debounced live filter bar is implemented in the panel. |
 

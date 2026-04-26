@@ -75,6 +75,29 @@ func test_tab_skips_collapsed_columns() -> void:
 	_cleanup_grid(grid)
 
 
+func test_apply_column_reorder_updates_model_order() -> void:
+	var grid := _make_grid_with_columns_and_rows(3, 1)
+
+	var changed := grid._apply_column_reorder(0, 3)
+
+	assert_bool(changed).is_true()
+	assert_str(grid._column_model.columns[0].property_name as String).is_equal("col_1")
+	assert_str(grid._column_model.columns[1].property_name as String).is_equal("col_2")
+	assert_str(grid._column_model.columns[2].property_name as String).is_equal("col_0")
+	_cleanup_grid(grid)
+
+
+func test_slot_at_x_maps_mouse_to_expected_drop_slot() -> void:
+	var grid := _make_grid_with_columns_and_rows(3, 1)
+	var vis := grid._column_model.visible_columns()
+
+	assert_int(grid._slot_at_x(10.0, vis)).is_equal(0)
+	assert_int(grid._slot_at_x(70.0, vis)).is_equal(1)
+	assert_int(grid._slot_at_x(190.0, vis)).is_equal(2)
+	assert_int(grid._slot_at_x(500.0, vis)).is_equal(3)
+	_cleanup_grid(grid)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
