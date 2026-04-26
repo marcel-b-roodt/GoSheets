@@ -296,6 +296,33 @@ func test_tab_does_not_emit_when_editor_not_visible() -> void:
 	editor.queue_free()
 
 
+func test_resource_reference_picker_emits_committed_resource() -> void:
+	var editor := CellEditor.new()
+	add_child(editor)
+	await await_signal_on(editor, "ready")
+
+	var committed := false
+	var committed_new: Variant = null
+	editor.value_committed.connect(func(_r, _p, _o, n):
+		committed = true
+		committed_new = n)
+
+	var owner := ResourceOwner.new()
+	var col := ColumnDef.new(&"spell_ref", TYPE_OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "SpellMetadata")
+	editor.open(owner, col, Rect2i(100, 100, 220, 24))
+	await await_signal_on(editor, "visibility_changed")
+
+	var picked := SpellMetadata.new()
+	editor._inner.value_changed.emit(picked)
+
+	assert_bool(committed).is_true()
+	assert_bool(committed_new is SpellMetadata).is_true()
+	assert_bool(editor.visible).is_false()
+
+	remove_child(editor)
+	editor.queue_free()
+
+
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
@@ -305,6 +332,14 @@ class DummyResource extends Resource:
 	var health: int = 100
 	var damage: float = 5.0
 	var speed: int = 42
+
+
+class SpellMetadata extends Resource:
+	var id: String = ""
+
+
+class ResourceOwner extends Resource:
+	var spell_ref: SpellMetadata = null
 
 
 func _make_dummy_resource() -> Resource:

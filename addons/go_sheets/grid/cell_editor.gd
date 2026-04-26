@@ -41,6 +41,7 @@ const _NUMERIC_CELL_FIELD    := preload("res://addons/go_sheets/cells/numeric_ce
 const _BOOL_CELL_FIELD       := preload("res://addons/go_sheets/cells/bool_cell_field.gd")
 const _ENUM_CELL_FIELD       := preload("res://addons/go_sheets/cells/enum_cell_field.gd")
 const _COLOR_CELL_FIELD      := preload("res://addons/go_sheets/cells/color_cell_field.gd")
+const _RESOURCE_REF_CELL_FIELD := preload("res://addons/go_sheets/cells/resource_ref_cell_field.gd")
 
 const _MIN_WIDTH             := 48
 const _POPUP_PADDING         := 4
@@ -196,6 +197,11 @@ func _rebuild_inner(col: ColumnDef, current: Variant) -> void:
 		var field := _ENUM_CELL_FIELD.new()
 		field.populate(col.hint_string)
 		field.set_value(int(current) if current != null else 0)
+		_inner = field
+	elif col.hint == PROPERTY_HINT_RESOURCE_TYPE and col.property_type == TYPE_OBJECT:
+		var field := _RESOURCE_REF_CELL_FIELD.new()
+		field.setup(col.hint_string)
+		field.set_value(current)
 		_inner = field
 	else:
 		match col.property_type:

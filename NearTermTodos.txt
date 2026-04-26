@@ -11,8 +11,6 @@ Completed ✅
 
 Remaining Stage 2
 ------------------
-[ ] 2.5  Resource reference picker — PROPERTY_HINT_RESOURCE_TYPE cell shows
-         a button that opens EditorInterface's built-in resource picker dialog.
 [ ] 2.6  Inline range slider — for PROPERTY_HINT_RANGE fields where the
          column is wide enough, show a compact HSlider alongside the value.
          (SpinBox already works; slider is additive.)
