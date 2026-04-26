@@ -323,6 +323,62 @@ func test_resource_reference_picker_emits_committed_resource() -> void:
 	editor.queue_free()
 
 
+func test_array_collection_apply_emits_committed_array() -> void:
+	var editor := CellEditor.new()
+	add_child(editor)
+	await await_signal_on(editor, "ready")
+
+	var committed := false
+	var committed_new: Variant = null
+	editor.value_committed.connect(func(_r, _p, _o, n):
+		committed = true
+		committed_new = n)
+
+	var owner := CollectionOwner.new()
+	var col := ColumnDef.new(&"values", TYPE_ARRAY, PROPERTY_HINT_NONE, "")
+	editor.open(owner, col, Rect2i(100, 100, 280, 24))
+	await await_signal_on(editor, "visibility_changed")
+
+	editor._inner._text_edit.text = "[4, 5, 6]"
+	editor._inner._on_apply_pressed()
+
+	assert_bool(committed).is_true()
+	assert_bool(committed_new is Array).is_true()
+	assert_int((committed_new as Array).size()).is_equal(3)
+	assert_bool(editor.visible).is_false()
+
+	remove_child(editor)
+	editor.queue_free()
+
+
+func test_dictionary_collection_apply_emits_committed_dictionary() -> void:
+	var editor := CellEditor.new()
+	add_child(editor)
+	await await_signal_on(editor, "ready")
+
+	var committed := false
+	var committed_new: Variant = null
+	editor.value_committed.connect(func(_r, _p, _o, n):
+		committed = true
+		committed_new = n)
+
+	var owner := CollectionOwner.new()
+	var col := ColumnDef.new(&"mapping", TYPE_DICTIONARY, PROPERTY_HINT_NONE, "")
+	editor.open(owner, col, Rect2i(100, 100, 280, 24))
+	await await_signal_on(editor, "visibility_changed")
+
+	editor._inner._text_edit.text = '{"fire": 12}'
+	editor._inner._on_apply_pressed()
+
+	assert_bool(committed).is_true()
+	assert_bool(committed_new is Dictionary).is_true()
+	assert_int((committed_new as Dictionary).size()).is_equal(1)
+	assert_bool(editor.visible).is_false()
+
+	remove_child(editor)
+	editor.queue_free()
+
+
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
@@ -340,6 +396,11 @@ class SpellMetadata extends Resource:
 
 class ResourceOwner extends Resource:
 	var spell_ref: SpellMetadata = null
+
+
+class CollectionOwner extends Resource:
+	var values: Array = []
+	var mapping: Dictionary = {}
 
 
 func _make_dummy_resource() -> Resource:

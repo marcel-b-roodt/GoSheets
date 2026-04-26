@@ -42,6 +42,7 @@ const _BOOL_CELL_FIELD       := preload("res://addons/go_sheets/cells/bool_cell_
 const _ENUM_CELL_FIELD       := preload("res://addons/go_sheets/cells/enum_cell_field.gd")
 const _COLOR_CELL_FIELD      := preload("res://addons/go_sheets/cells/color_cell_field.gd")
 const _RESOURCE_REF_CELL_FIELD := preload("res://addons/go_sheets/cells/resource_ref_cell_field.gd")
+const _COLLECTION_CELL_FIELD := preload("res://addons/go_sheets/cells/collection_cell_field.gd")
 
 const _MIN_WIDTH             := 48
 const _POPUP_PADDING         := 4
@@ -205,6 +206,16 @@ func _rebuild_inner(col: ColumnDef, current: Variant) -> void:
 		_inner = field
 	else:
 		match col.property_type:
+			TYPE_ARRAY:
+				var field := _COLLECTION_CELL_FIELD.new()
+				field.setup(false)
+				field.set_value(current)
+				_inner = field
+			TYPE_DICTIONARY:
+				var field := _COLLECTION_CELL_FIELD.new()
+				field.setup(true)
+				field.set_value(current)
+				_inner = field
 			TYPE_BOOL:
 				var field := _BOOL_CELL_FIELD.new()
 				field.set_value(bool(current) if current != null else false)
