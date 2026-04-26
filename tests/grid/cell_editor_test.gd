@@ -101,6 +101,125 @@ func test_range_slider_updates_spinbox_value() -> void:
 	editor.queue_free()
 
 
+func test_string_submit_commits_updated_value_once() -> void:
+	var editor := CellEditor.new()
+	add_child(editor)
+	await await_signal_on(editor, "ready")
+
+	var commit_count := 0
+	var old_value: Variant = null
+	var new_value: Variant = null
+	editor.value_committed.connect(func(_r, _p, old_v, new_v):
+		commit_count += 1
+		old_value = old_v
+		new_value = new_v)
+
+	var resource := _make_dummy_resource()
+	var col := ColumnDef.new(&"name", TYPE_STRING, PROPERTY_HINT_NONE, "")
+	editor.open(resource, col, Rect2i(100, 100, 120, 24))
+	await await_signal_on(editor, "visibility_changed")
+
+	var field := editor._inner
+
+	field._line_edit.text = "renamed"
+	field._on_submitted()
+	editor._on_close_requested()
+
+	assert_int(commit_count).is_equal(1)
+	assert_str(old_value as String).is_equal("test")
+	assert_str(new_value as String).is_equal("renamed")
+	assert_bool(editor.visible).is_false()
+
+	remove_child(editor)
+	editor.queue_free()
+
+
+func test_string_focus_exit_commits_updated_value() -> void:
+	var editor := CellEditor.new()
+	add_child(editor)
+	await await_signal_on(editor, "ready")
+
+	var committed := false
+	var committed_value: Variant = null
+	editor.value_committed.connect(func(_r, _p, _o, n):
+		committed = true
+		committed_value = n)
+
+	var col := ColumnDef.new(&"name", TYPE_STRING, PROPERTY_HINT_NONE, "")
+	editor.open(_make_dummy_resource(), col, Rect2i(100, 100, 120, 24))
+	await await_signal_on(editor, "visibility_changed")
+
+	var field := editor._inner
+	field._line_edit.text = "focus-commit"
+	field._on_focus_exited()
+
+	assert_bool(committed).is_true()
+	assert_str(committed_value as String).is_equal("focus-commit")
+	assert_bool(editor.visible).is_false()
+
+	remove_child(editor)
+	editor.queue_free()
+
+
+func test_plain_numeric_focus_exit_commits_int_value() -> void:
+	var editor := CellEditor.new()
+	add_child(editor)
+	await await_signal_on(editor, "ready")
+
+	var committed := false
+	var committed_old: Variant = null
+	var committed_new: Variant = null
+	editor.value_committed.connect(func(_r, _p, old_v, new_v):
+		committed = true
+		committed_old = old_v
+		committed_new = new_v)
+
+	var col := ColumnDef.new(&"health", TYPE_INT, PROPERTY_HINT_NONE, "")
+	editor.open(_make_dummy_resource(), col, Rect2i(100, 100, 120, 24))
+	await await_signal_on(editor, "visibility_changed")
+
+	var field := editor._inner
+	field._spinbox.value = 133
+	field._on_focus_exited()
+
+	assert_bool(committed).is_true()
+	assert_int(int(committed_old)).is_equal(100)
+	assert_bool(committed_new is int).is_true()
+	assert_int(int(committed_new)).is_equal(133)
+	assert_bool(editor.visible).is_false()
+
+	remove_child(editor)
+	editor.queue_free()
+
+
+func test_range_numeric_submit_commits_float_value() -> void:
+	var editor := CellEditor.new()
+	add_child(editor)
+	await await_signal_on(editor, "ready")
+
+	var committed := false
+	var committed_value: Variant = null
+	editor.value_committed.connect(func(_r, _p, _o, n):
+		committed = true
+		committed_value = n)
+
+	var col := ColumnDef.new(&"damage", TYPE_FLOAT, PROPERTY_HINT_RANGE, "0,10,0.5")
+	editor.open(_make_dummy_resource(), col, Rect2i(100, 100, 120, 24))
+	await await_signal_on(editor, "visibility_changed")
+
+	var field := editor._inner
+	field._spinbox.value = 6.5
+	field._on_submitted()
+
+	assert_bool(committed).is_true()
+	assert_bool(committed_value is float).is_true()
+	assert_float(float(committed_value)).is_equal(6.5)
+	assert_bool(editor.visible).is_false()
+
+	remove_child(editor)
+	editor.queue_free()
+
+
 # ---------------------------------------------------------------------------
 # _input() --- tab commits and emits tab_pressed
 # ---------------------------------------------------------------------------

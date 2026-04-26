@@ -21,6 +21,15 @@
         "git tag": true,
         "./verify.sh": true,
         "./scripts/run_tests/run_tests.sh": true,
-        "./run_tests/run_tests.sh": true
+        "./run_tests/run_tests.sh": true,
+        "/^cd /home/marcel/data/Work\\\\ -\\\\ Programming/GodotAddons/GoSheets && bash scripts/run_tests/run_tests\\.sh --help$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "bats": true,
+        "/^cd /home/marcel/data/Work\\\\ -\\\\ Programming/GodotAddons/GoSheets && bash scripts/run_tests/run_tests\\.sh$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

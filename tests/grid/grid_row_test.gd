@@ -13,7 +13,7 @@ const ColumnDef := preload("res://addons/go_sheets/grid/column_def.gd")
 func test_enter_key_emits_edit_requested() -> void:
 	var row := GridRow.new()
 	add_child(row)
-	await await_ready(row)
+	await await_signal_on(row, "ready")
 
 	var emitted_row: int = -1
 	var emitted_col: int = -1
@@ -41,7 +41,7 @@ func test_enter_key_emits_edit_requested() -> void:
 func test_f2_key_emits_edit_requested() -> void:
 	var row := GridRow.new()
 	add_child(row)
-	await await_ready(row)
+	await await_signal_on(row, "ready")
 
 	var emitted_row: int = -1
 	row.edit_requested.connect(func(r, _c, _s): emitted_row = r)
@@ -66,7 +66,7 @@ func test_f2_key_emits_edit_requested() -> void:
 func test_tab_emits_edit_requested_with_shift_false() -> void:
 	var row := GridRow.new()
 	add_child(row)
-	await await_ready(row)
+	await await_signal_on(row, "ready")
 
 	var emitted_shift: bool = true  # init to opposite to detect change
 	row.edit_requested.connect(func(_r, _c, s): emitted_shift = s)
@@ -88,7 +88,7 @@ func test_tab_emits_edit_requested_with_shift_false() -> void:
 func test_shift_tab_emits_edit_requested_with_shift_true() -> void:
 	var row := GridRow.new()
 	add_child(row)
-	await await_ready(row)
+	await await_signal_on(row, "ready")
 
 	var emitted_shift: bool = false
 	row.edit_requested.connect(func(_r, _c, s): emitted_shift = s)
@@ -114,7 +114,7 @@ func test_shift_tab_emits_edit_requested_with_shift_true() -> void:
 func test_unhandled_key_does_not_crash() -> void:
 	var row := GridRow.new()
 	add_child(row)
-	await await_ready(row)
+	await await_signal_on(row, "ready")
 
 	row.bind(0, _make_resource(), _make_columns(), [0], false)
 
@@ -142,6 +142,6 @@ func _make_resource() -> Resource:
 
 func _make_columns() -> Array:
 	return [
-		ColumnDef.new(&"name", TYPE_STRING, false, 120, "", 0),
-		ColumnDef.new(&"health", TYPE_INT, false, 120, "", 0),
+		ColumnDef.new(&"name", TYPE_STRING, PROPERTY_HINT_NONE, ""),
+		ColumnDef.new(&"health", TYPE_INT, PROPERTY_HINT_NONE, ""),
 	]

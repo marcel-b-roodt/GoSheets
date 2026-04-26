@@ -73,7 +73,7 @@ func test_value_changed_emitted_on_text_submitted() -> void:
 	field._line_edit.text = "submitted"
 	field._on_submitted()
 
-	assert_str(emitted_value as String).is_equal("submitted")
+	assert_str(str(emitted_value)).is_equal("submitted")
 
 	remove_child(field)
 	field.queue_free()

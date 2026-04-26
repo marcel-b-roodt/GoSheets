@@ -10,25 +10,25 @@ The single source of truth for every feature's status. Updated after each task s
 
 | # | Feature | Status |
 |---|---|---|
-| 0.1 | Plugin entry point — `plugin.gd`, dock registration, enable/disable | 📋 Planned |
-| 0.2 | Resource scanner — discover `.tres`/`.res` files under a configurable root | 📋 Planned |
-| 0.3 | Script-class registry — enumerate `Resource` subclasses in the project | 📋 Planned |
-| 0.4 | Settings persistence — `user://` resource for plugin config | 📋 Planned |
-| 0.5 | Verify + CI scaffolding — `verify.sh`, GdUnit4, GitHub Actions | 📋 Planned |
+| 0.1 | Plugin entry point — `plugin.gd`, dock registration, enable/disable | ✅ Main-screen plugin is implemented and mounts the Resources panel into Godot's editor main screen. |
+| 0.2 | Resource scanner — discover `.tres`/`.res` files under a configurable root | ✅ Scanner exists with recursive discovery and dedicated test coverage. |
+| 0.3 | Script-class registry — enumerate `Resource` subclasses in the project | ✅ Type registry populates the resource-type selector from global classes. |
+| 0.4 | Settings persistence — `user://` resource for plugin config | ✅ Settings resource persists scan root, last-selected type, and column layout data. |
+| 0.5 | Verify + CI scaffolding — `verify.sh`, GdUnit4, GitHub Actions | ✅ Local verify/test scripts and CI scaffolding are present; some runtime GdUnit cases still need repair. |
 
 ## Stage 1 — Spreadsheet Core (Read-only)
 
 | # | Feature | Status |
 |---|---|---|
-| 1.1 | Type selector dropdown | 📋 Planned |
-| 1.2 | Auto-derived column definitions from `@export` properties | 📋 Planned |
-| 1.3 | Grid renderer with virtual/pooled rows | 📋 Planned |
-| 1.4 | Read-only cell display (all scalar + reference types) | 📋 Planned |
-| 1.5 | Row selection + Inspector sync | 📋 Planned |
-| 1.6 | Column visibility toggle | 📋 Planned |
+| 1.1 | Type selector dropdown | ✅ Implemented in the main toolbar and populated from the type registry. |
+| 1.2 | Auto-derived column definitions from `@export` properties | ✅ ColumnModel builds columns from exported properties and restores saved layouts. |
+| 1.3 | Grid renderer with virtual/pooled rows | ✅ ResourceGrid and GridRow provide the read-only spreadsheet surface with recycled rows. |
+| 1.4 | Read-only cell display (all scalar + reference types) | 🔧 Core scalar/resource display is in place; broader type coverage can still expand. |
+| 1.5 | Row selection + Inspector sync | ✅ Selecting a row forwards the resource into Godot's Inspector. |
+| 1.6 | Column visibility toggle | ✅ Visibility/collapse state is implemented and persisted through saved layouts. |
 | 1.7 | Column reordering | 📋 Planned |
-| 1.8 | Sort by column | 📋 Planned |
-| 1.9 | Text search / filter bar | 📋 Planned |
+| 1.8 | Sort by column | ✅ Header sorting and context-menu sort actions are implemented. |
+| 1.9 | Text search / filter bar | ✅ Debounced live filter bar is implemented in the panel. |
 
 ## Stage 2 — Inline Editing
 
@@ -37,11 +37,12 @@ The single source of truth for every feature's status. Updated after each task s
 | 2.1 | Inline cell editing | 🔧 Popup editor supports string, bool, enum, color, and numeric fields. Range-backed numeric popup editors now show slider + spinbox controls and commit pending values on close; resource picker, arrays, and inline-in-row embedding remain pending. |
 | 2.2 | Undo/redo integration | ✅ Inline cell edits are applied through `EditorUndoRedoManager`, saved to disk, and refreshed back into the grid / Inspector. |
 | 2.3 | Multi-cell batch edit | 📋 Planned |
-| 2.4 | Enum support | 📋 Planned |
+| 2.4 | Enum support | ✅ `PROPERTY_HINT_ENUM` editing via `OptionButton` is implemented in the popup editor. |
 | 2.5 | Resource reference picker | 📋 Planned |
-| 2.6 | Array property cells | 📋 Planned |
-| 2.7 | Dirty-state indicator + auto-save option | 📋 Planned |
-| 2.8 | Keyboard navigation | ✅ Core wired: Enter/F2 open cell; Tab/Shift+Tab navigate; Escape cancels. Tab focus-leak to Godot editor unresolved (needs focus capture via `_input` override in grid). |
+| 2.6 | Ranged numeric cells | ✅ `PROPERTY_HINT_RANGE` uses spinbox + slider controls with hint-string min/max/step parsing. |
+| 2.7 | Array property cells | 📋 Planned |
+| 2.8 | Dirty-state indicator + auto-save option | 📋 Planned |
+| 2.9 | Keyboard navigation | ✅ Enter/F2 open cell; Tab/Shift+Tab navigate editable columns (skipping collapsed), wrap across rows, and cycle at grid boundaries; Escape cancels. |
 
 ## Stage 3 — Resource Lifecycle
 
@@ -60,7 +61,8 @@ The single source of truth for every feature's status. Updated after each task s
 |---|---|---|
 | 4.1 | Column picker panel | 📋 Planned |
 | 4.2 | Column pinning | 📋 Planned |
-| 4.3 | Column width resize | 📋 Planned |
+| 4.3 | Column width resize | 🔧 Drag resize is implemented; divider double-click auto-fit remains pending as 4.3b. |
+| 4.3a | Column collapse / expand strip | ✅ Header collapse controls and expand-all support are implemented. |
 | 4.3b | Divider double-click auto-fit with max-width cap (QoL) | 📋 Planned |
 | 4.4 | Computed / derived columns | 📋 Planned |
 | 4.5 | Nested resource expansion | 📋 Planned |

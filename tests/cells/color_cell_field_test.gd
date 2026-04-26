@@ -28,7 +28,7 @@ func test_get_value_returns_current_color() -> void:
 	await await_signal_on(field, "ready")
 
 	field.set_value(Color.BLUE)
-	var v := field.get_value()
+	var v: Color = field.get_value()
 	assert_bool((v as Color).is_equal_approx(Color.BLUE)).is_true()
 
 	remove_child(field)

@@ -23,7 +23,7 @@ The plugin boots, registers its dock, and can read resource files from disk. No 
 ## Stage 1 — Spreadsheet core (Read-only grid)
 
 A scrollable, filterable table that shows all resources of a selected type, one resource per row, one property per column.
-y
+
 | # | Feature | Notes |
 |---|---|---|
 | 1.1 | Type selector — dropdown/list to pick which `Resource` subclass to view | Populated from Stage 0.3 registry |
@@ -163,12 +163,6 @@ Bridge the gap between GoSheets and external data tools.
 | S.2 | Type blacklist — exclude specific class names from the type selector dropdown | Useful for hiding base classes or internal types |
 
 **Exit criteria:** Developer can configure the plugin to hide noise resources (e.g. GdUnit4 internal assets) without those cluttering the type selector or row list.
-
-- Script-driven row colouring / conditional formatting
-- Resource "tagging" system independent of properties
-- Plugin-defined cell renderers (so other addons can extend GoSheets)
-- Remote / Google Sheets sync (read-only live preview)
-- Node-pinning: drag a Node from the scene tree to lock to a resource row
 
 ---
 

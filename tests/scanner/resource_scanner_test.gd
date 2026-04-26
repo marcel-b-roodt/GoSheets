@@ -14,7 +14,7 @@ var _tmp_root: String = ""
 
 func before_each() -> void:
 	_tmp_root = "user://go_sheets_test_%d" % Time.get_ticks_msec()
-	DirAccess.make_dir_recursive_absolute(_tmp_root)
+	_mkdir(_tmp_root)
 
 
 func after_each() -> void:
@@ -34,22 +34,25 @@ func _remove_dir_recursive(path: String) -> void:
 		var full := path + "/" + entry
 		if dir.current_is_dir():
 			_remove_dir_recursive(full)
-			DirAccess.remove_absolute(full)
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(full))
 		else:
-			DirAccess.remove_absolute(full)
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(full))
 		entry = dir.get_next()
 	dir.list_dir_end()
-	DirAccess.remove_absolute(path)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
 func _touch(path: String) -> void:
+	_mkdir(path.get_base_dir())
 	var fa := FileAccess.open(path, FileAccess.WRITE)
+	assert_object(fa).is_not_null()
 	fa.store_string("")
 	fa.close()
 
 
 func _mkdir(path: String) -> void:
-	DirAccess.make_dir_recursive_absolute(path)
+	var err := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path))
+	assert_int(err).is_equal(OK)
 
 # ---------------------------------------------------------------------------
 # Tests
