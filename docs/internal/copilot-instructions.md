@@ -208,6 +208,41 @@ If the same sequence of shell commands recurs across two or more sessions, **pau
 ### 4 — New scripts ship with bats tests
 Every script added under `scripts/` must have a companion bats test file. Tests live in `scripts/<tool-name>/tests/`. Run bats and confirm all tests pass before considering the script done. See **Scripts & Shell Testing** below for the layout.
 
+### 5 — Split work into release-trackable task slices
+Every non-trivial request must be split into small, independently verifiable slices so release notes can map changes to real user-facing outcomes.
+
+Use this pattern:
+- **One task slice = one clear behavior change** (or one coherent refactor)
+- **Each slice lands with tests** (or a stated reason why tests are not applicable)
+- **Avoid mixed commits** that combine unrelated fixes/features/docs
+
+Before coding, write a short slice plan in this form:
+1. Scope (what behavior changes)
+2. Files touched
+3. Validation (tests/manual checks)
+4. Commit message (planned)
+
+If a request is broad, propose a sequence of small slices and execute in order.
+
+### 6 — Commit messages must be changelog-friendly
+Commit messages are the raw material for `scripts/release/prepare_release_notes.sh`.
+Use conventional, descriptive subjects that can be grouped cleanly into Added / Changed / Fixed / Tests.
+
+Required format:
+- `feat(scope): <user-facing change>`
+- `fix(scope): <bug fix>`
+- `refactor(scope): <internal cleanup with behavior impact noted if any>`
+- `test(scope): <coverage addition>`
+- `docs(scope): <documentation update>`
+- `chore(scope): <non-user-facing maintenance>`
+
+Examples:
+- `feat(grid): add keyboard wrapping between rows for Tab navigation`
+- `fix(cells): compute popup height from child minimum size`
+- `test(grid): cover tab/shift-tab wrapping and collapsed-column skipping`
+
+Avoid vague messages like `update`, `cleanup`, `wip`, or multi-topic subjects.
+
 ---
 
 ## Pre-Commit Verification

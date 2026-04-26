@@ -3,10 +3,17 @@
 #
 # Usage:
 #   ./scripts/release.sh <version>
+#   ./scripts/release.sh <version> --dev
 #   ./scripts/release.sh 0.3.0
+#   ./scripts/release.sh 0.5.0-dev1 --dev
 #
 # What it does:
 #   1. Validates git state (on main, clean working tree, tag does not exist)
+#      and validates version format:
+#        stable: X.Y.Z
+#        dev:    X.Y.Z-devN
+#   2. Requires a non-empty [Unreleased] section (prepare it first with
+#      scripts/release/prepare_release_notes.sh)
 #   2. Updates CHANGELOG.md — promotes [Unreleased] → [VERSION] — DATE and
 #      inserts a fresh empty [Unreleased] section above it
 #   3. Bumps version= in addons/go_sheets/plugin.cfg
@@ -29,9 +36,33 @@ cd "$REPO_ROOT"
 
 # ── Argument check ─────────────────────────────────────────────────────────────
 VERSION="${1:-}"
+CHANNEL="${2:-stable}"
+
 if [[ -z "$VERSION" ]]; then
-    echo "Usage: scripts/release.sh <version>  (e.g. 0.3.0)" >&2
+    echo "Usage: scripts/release.sh <version> [--dev]  (e.g. 0.3.0 or 0.5.0-dev1 --dev)" >&2
     exit 1
+fi
+
+if [[ "$CHANNEL" != "stable" && "$CHANNEL" != "--dev" ]]; then
+    echo "Error: unknown second argument '$CHANNEL' (expected '--dev' or omitted)" >&2
+    exit 1
+fi
+
+IS_DEV=false
+if [[ "$CHANNEL" == "--dev" ]]; then
+    IS_DEV=true
+fi
+
+if $IS_DEV; then
+    if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-dev[0-9]+$ ]]; then
+        echo "Error: dev version must match X.Y.Z-devN (e.g. 0.5.0-dev1)" >&2
+        exit 1
+    fi
+else
+    if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "Error: stable version must match X.Y.Z (e.g. 0.5.0)" >&2
+        exit 1
+    fi
 fi
 
 TAG="v${VERSION}"
@@ -64,6 +95,22 @@ if ! grep -q "^## \[Unreleased\]" CHANGELOG.md; then
     exit 1
 fi
 
+# ── Validate [Unreleased] is not empty ────────────────────────────────────────
+if ! awk '
+    /^## \[Unreleased\]/ { in_unreleased=1; next }
+    in_unreleased && /^## \[/ { in_unreleased=0 }
+    in_unreleased {
+        if ($0 !~ /^[[:space:]]*$/ && $0 !~ /^---$/) {
+            found=1
+            exit 0
+        }
+    }
+    END { exit found ? 0 : 1 }
+' CHANGELOG.md; then
+    echo "Error: [Unreleased] section is empty. Run scripts/release/prepare_release_notes.sh first." >&2
+    exit 1
+fi
+
 # ── Update CHANGELOG.md ────────────────────────────────────────────────────────
 echo "→ Updating CHANGELOG.md..."
 
@@ -87,11 +134,19 @@ bash verify.sh
 # ── Commit ─────────────────────────────────────────────────────────────────────
 echo "→ Committing..."
 git add CHANGELOG.md addons/go_sheets/plugin.cfg
-git commit -m "chore: bump version to ${TAG}"
+if $IS_DEV; then
+    git commit -m "chore: bump prerelease version to ${TAG}"
+else
+    git commit -m "chore: bump version to ${TAG}"
+fi
 
 # ── Tag ────────────────────────────────────────────────────────────────────────
 echo "→ Tagging ${TAG}..."
-git tag -a "${TAG}" -m "Release ${TAG}"
+if $IS_DEV; then
+    git tag -a "${TAG}" -m "Prerelease ${TAG}"
+else
+    git tag -a "${TAG}" -m "Release ${TAG}"
+fi
 
 # ── Push ───────────────────────────────────────────────────────────────────────
 echo "→ Pushing main + ${TAG}..."

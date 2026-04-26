@@ -3,11 +3,12 @@
 #
 # Covers:
 #   - Script presence and executability
-#   - No argument → exit 1 with usage message
-#   - Git guard: not on main branch → exit 1
-#   - Git guard: dirty working tree → exit 1
-#   - Git guard: tag already exists → exit 1
-#   - CHANGELOG guard: no [Unreleased] section → exit 1
+#   - No argument -> exit 1 with usage message
+#   - Git guard: not on main branch -> exit 1
+#   - Git guard: dirty working tree -> exit 1
+#   - Git guard: tag already exists -> exit 1
+#   - CHANGELOG guard: no [Unreleased] section -> exit 1
+#   - CHANGELOG guard: empty [Unreleased] section -> exit 1 with prepare hint
 #   - CHANGELOG.md is updated with versioned heading and today's date
 #   - CHANGELOG.md retains a fresh [Unreleased] section above the new version
 #   - plugin.cfg version= line is bumped
@@ -18,11 +19,11 @@
 REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/../../.." && pwd)"
 RELEASE_SCRIPT="$REPO_ROOT/scripts/release.sh"
 
-# Real git binary — captured here so the push mock can delegate to it.
+# Real git binary - captured here so the push mock can delegate to it.
 REAL_GIT="/usr/bin/git"
 
 # ---------------------------------------------------------------------------
-# Helpers — isolated temp repo
+# Helpers - isolated temp repo
 # ---------------------------------------------------------------------------
 
 setup() {
@@ -59,7 +60,7 @@ _setup_git_repo() {
 
 ---
 
-## [0.1.0] — 2026-01-01
+## [0.1.0] - 2026-01-01
 
 ### Added
 - Initial release
@@ -68,8 +69,8 @@ EOF
     mkdir -p addons/go_sheets
     printf '[plugin]\n\nversion="0.1.0"\n' > addons/go_sheets/plugin.cfg
 
-    # Fake verify.sh — avoids requiring gdparse/gdlint in the test environment.
-    printf '#!/usr/bin/env bash\necho "  ✓ All files parsed OK."\necho "✓ Verification passed — safe to commit."\n' \
+    # Fake verify.sh - avoids requiring gdparse/gdlint in the test environment.
+    printf '#!/usr/bin/env bash\necho "  All files parsed OK."\necho "Verification passed - safe to commit."\n' \
         > verify.sh
     chmod +x verify.sh
 
@@ -164,6 +165,28 @@ _run_release() {
     _run_release 0.3.0
     [ "$status" -eq 1 ]
     echo "$output" | grep -qi "Unreleased"
+}
+
+@test "exits 1 when [Unreleased] section is empty" {
+    _setup_git_repo
+    cd "$TMP_DIR"
+    cat > CHANGELOG.md << 'EOF'
+# Changelog
+
+## [Unreleased]
+
+---
+
+## [0.1.0] - 2026-01-01
+
+### Added
+- Initial release
+EOF
+    "$REAL_GIT" add CHANGELOG.md
+    "$REAL_GIT" commit -m "empty unreleased"
+    _run_release 0.3.0
+    [ "$status" -eq 1 ]
+    echo "$output" | grep -q "prepare_release_notes.sh"
 }
 
 # ---------------------------------------------------------------------------

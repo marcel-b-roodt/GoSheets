@@ -1,0 +1,100 @@
+name: Discord Release Notification
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview Discord payload only (do not post)"
+        required: true
+        default: true
+        type: boolean
+      tag_name:
+        description: "Tag to render in preview/manual run (e.g. v0.4.2)"
+        required: false
+        default: "v0.0.0-preview"
+        type: string
+      release_name:
+        description: "Release title for preview/manual run"
+        required: false
+        default: "GoSheets preview release"
+        type: string
+      release_url:
+        description: "Release URL for preview/manual run"
+        required: false
+        default: "https://github.com/marcel-b-roodt/GoSheets/releases"
+        type: string
+      release_body:
+        description: "Release body text for preview/manual run"
+        required: false
+        default: "Preview release notes"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  notify-discord:
+    name: Post release to Discord (optional)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Build release message content
+        env:
+          RELEASE_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.release_name || github.event.release.name }}
+          TAG_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.release_url || github.event.release.html_url }}
+          RELEASE_BODY: ${{ github.event_name == 'workflow_dispatch' && inputs.release_body || github.event.release.body }}
+          IS_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && contains(inputs.tag_name, '-') || github.event.release.prerelease }}
+        run: |
+          SUMMARY=$(printf "%s" "$RELEASE_BODY" | sed 's/\r//g' | sed '/^\s*$/d' | head -n 8)
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY="(No highlights were included in the release body.)"
+          fi
+
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            printf '@here\n\nGoSheets prerelease %s is live for preview testing.\n\n%s\n%s\n\nHighlights:\n%s\n\nTry the dev build and share feedback before the stable release.' \
+              "$TAG_NAME" "$RELEASE_NAME" "$RELEASE_URL" "$SUMMARY" > discord_content.txt
+          else
+            printf '@here\n\nGoSheets %s is live.\n\n%s\n%s\n\nHighlights:\n%s\n\nTry the new version from GitHub and share feedback.' \
+              "$TAG_NAME" "$RELEASE_NAME" "$RELEASE_URL" "$SUMMARY" > discord_content.txt
+          fi
+
+      - name: Preview release payload (manual run)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          jq -n --arg content "$(cat discord_content.txt)" '{content:$content}' > payload.json
+          echo "Preview payload.json (manual run):"
+          jq . payload.json
+
+      - name: Post release message to Discord (optional)
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
+        env:
+          WEBHOOK_URL: ${{ (github.event_name == 'workflow_dispatch' && contains(inputs.tag_name, '-')) && secrets.DISCORD_WEBHOOK_PRERELEASE || (github.event.release.prerelease && secrets.DISCORD_WEBHOOK_PRERELEASE || secrets.DISCORD_WEBHOOK_RELEASE) }}
+        run: |
+          if [ -z "${WEBHOOK_URL:-}" ]; then
+            echo "::notice::Release webhook not set for this release type; skipping Discord post."
+            exit 0
+          fi
+
+          if [ ! -f discord_content.txt ]; then
+            echo "::warning::Release message content file missing; skipping Discord post."
+            exit 0
+          fi
+
+          jq -n --arg content "$(cat discord_content.txt)" '{content:$content}' > payload.json
+
+          HTTP_CODE=$(curl -sS -o /tmp/discord_response.txt --write-out "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            "$WEBHOOK_URL")
+          echo "Discord API HTTP ${HTTP_CODE}"
+          if [ -s /tmp/discord_response.txt ]; then
+            echo "Response body: $(cat /tmp/discord_response.txt)"
+          fi
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Discord release webhook failed with HTTP ${HTTP_CODE}. See response body above."
+            exit 1
+          fi
