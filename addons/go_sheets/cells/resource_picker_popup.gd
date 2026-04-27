@@ -89,8 +89,10 @@ func open(base_type: String, scan_root: String = "res://") -> void:
 	_search_edit.grab_focus()
 
 
-## Read just the first line of a .tres file to get the gd_resource type.
-## Returns "" for .res files, missing files, or unrecognised formats.
+## Read the first line of a .tres file to identify its resource class.
+## For GDScript-defined classes Godot writes type="Resource" script_class="Foo";
+## for engine types it writes type="Foo" with no script_class field.
+## Returns "" for .res files, missing files, or unrecognised headers.
 static func read_tres_type(path: String) -> String:
 	if not path.ends_with(".tres"):
 		return ""
@@ -99,16 +101,26 @@ static func read_tres_type(path: String) -> String:
 		return ""
 	var first_line := file.get_line()
 	file.close()
-	# Header form: [gd_resource type="SpellMetadata" format=3 uid="uid://..."]
-	var marker := 'type="'
-	var start := first_line.find(marker)
-	if start < 0:
+	# Prefer script_class (GDScript-defined resource types):
+	#   [gd_resource type="Resource" script_class="SpellEffect" ...]
+	var sc_marker := 'script_class="'
+	var sc_start := first_line.find(sc_marker)
+	if sc_start >= 0:
+		sc_start += sc_marker.length()
+		var sc_end := first_line.find('"', sc_start)
+		if sc_end >= 0:
+			return first_line.substr(sc_start, sc_end - sc_start)
+	# Fallback: type= field (engine/extension types):
+	#   [gd_resource type="Texture2D" ...]
+	var type_marker := 'type="'
+	var t_start := first_line.find(type_marker)
+	if t_start < 0:
 		return ""
-	start += marker.length()
-	var end := first_line.find('"', start)
-	if end < 0:
+	t_start += type_marker.length()
+	var t_end := first_line.find('"', t_start)
+	if t_end < 0:
 		return ""
-	return first_line.substr(start, end - start)
+	return first_line.substr(t_start, t_end - t_start)
 
 
 # ---------------------------------------------------------------------------
@@ -118,13 +130,43 @@ static func read_tres_type(path: String) -> String:
 func _type_matches(path: String, wanted: String) -> bool:
 	var file_type := read_tres_type(path)
 	if file_type == "":
-		# .res file or unreadable — include only when wanted is blank
+		# Unreadable or .res file — include only when wanted is blank
 		return wanted == ""
-	# Direct match or ClassDB inheritance match
+	# Direct match
 	if file_type == wanted:
 		return true
+	# Engine class inheritance (ClassDB knows both sides)
 	if ClassDB.class_exists(file_type) and ClassDB.class_exists(wanted):
 		return ClassDB.is_parent_class(file_type, wanted)
+	# GDScript class inheritance: walk the base_class chain from global class list.
+	# Build a map of class → base_class from the project's global class list.
+	return _script_class_extends(file_type, wanted)
+
+
+## Walk the GDScript class inheritance chain to check if [param child_class]
+## extends [param base_class]. Uses ProjectSettings global class list.
+## Returns true if child_class == base_class or if any ancestor matches.
+static func _script_class_extends(child_class: String, base_class: String) -> bool:
+	if child_class == base_class:
+		return true
+	# Build a map of class_name → base_class_name from global_class_list
+	var parent_map: Dictionary = {}
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		var cls := str(entry.get("class", ""))
+		var base := str(entry.get("base", ""))
+		if cls != "":
+			parent_map[cls] = base
+	# Walk the chain upward
+	var current := child_class
+	var visited: Array[String] = []
+	while current != "" and not (current in visited):
+		if current == base_class:
+			return true
+		# Also accept if base_class is a ClassDB (engine) type that current inherits
+		if ClassDB.class_exists(current) and ClassDB.class_exists(base_class):
+			return ClassDB.is_parent_class(current, base_class)
+		visited.append(current)
+		current = str(parent_map.get(current, ""))
 	return false
 
 

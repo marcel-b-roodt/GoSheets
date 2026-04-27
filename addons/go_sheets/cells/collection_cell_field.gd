@@ -477,6 +477,20 @@ func _array_contains_resources(value: Variant) -> bool:
 func _detect_resource_array_class(hint_string: String) -> String:
 	if hint_string == "":
 		return ""
+	# Godot encodes typed-array element type as "T/H:ClassName" or "T:ClassName".
+	# Extract what is after the last colon — that is the element class name.
+	var colon_pos := hint_string.rfind(":")
+	if colon_pos >= 0:
+		var class_name_str := hint_string.substr(colon_pos + 1).strip_edges()
+		if class_name_str != "":
+			# Engine Resource subclass (e.g. Texture2D, AudioStream)?
+			if ClassDB.class_exists(class_name_str) and ClassDB.is_parent_class(class_name_str, "Resource"):
+				return class_name_str
+			# GDScript class — confirm it exists in the global class list.
+			for entry: Dictionary in ProjectSettings.get_global_class_list():
+				if entry.get("class", "") == class_name_str:
+					return class_name_str
+	# Fallback: legacy substring scan (e.g. bare "Resource" hint_string)
 	if hint_string.find("Resource") >= 0:
 		return "Resource"
 	for entry: Dictionary in ProjectSettings.get_global_class_list():
@@ -489,7 +503,24 @@ func _detect_resource_array_class(hint_string: String) -> String:
 func _matches_resource_class_hint(resource: Resource) -> bool:
 	if _array_resource_class_hint == "" or _array_resource_class_hint == "Resource":
 		return true
-	return ClassDB.is_parent_class(resource.get_class(), _array_resource_class_hint)
+	# Engine/extension class: use ClassDB for inheritance check.
+	if ClassDB.class_exists(_array_resource_class_hint):
+		return ClassDB.is_parent_class(resource.get_class(), _array_resource_class_hint)
+	# GDScript class: walk the resource's script chain and compare resource_path
+	# against the expected class entry in the global class list.
+	var expected_path := ""
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		if entry.get("class", "") == _array_resource_class_hint:
+			expected_path = entry.get("path", "")
+			break
+	if expected_path == "":
+		return false
+	var script := resource.get_script() as GDScript
+	while script != null:
+		if script.resource_path == expected_path:
+			return true
+		script = script.get_base_script() as GDScript
+	return false
 
 
 func _set_error(message: String) -> void:
