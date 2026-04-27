@@ -119,10 +119,10 @@ func bind(
 
 	# Pinned-column background — covers all pinned columns with a dark tint
 	# to signal they are read-only. Computed after all labels are positioned.
-	var pinned_right := 0
+	var pinned_right: int = 0
 	for i in columns.size():
 		if columns[i].pinned and not columns[i].collapsed:
-			var right := x_offsets[i] + columns[i].width
+			var right: int = x_offsets[i] + columns[i].width
 			if right > pinned_right:
 				pinned_right = right
 	if pinned_right > 0:
