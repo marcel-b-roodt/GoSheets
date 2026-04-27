@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="SpellEffect" format=3 uid="uid://dqwsmioh6o50n"]
+
+[ext_resource type="Script" uid="uid://c47qmf75qs0cp" path="res://test_scenes/resources/spell_effect.gd" id="1_dukof"]
+
+[resource]
+script = ExtResource("1_dukof")
+effect_name = "Frost Damage"
+description = "Deals frost damage"
+metadata/_custom_type_script = "uid://c47qmf75qs0cp"

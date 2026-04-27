@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="SpellEffect" format=3 uid="uid://bq22kto52k33v"]
+
+[ext_resource type="Script" uid="uid://c47qmf75qs0cp" path="res://test_scenes/resources/spell_effect.gd" id="1_qxon3"]
+
+[resource]
+script = ExtResource("1_qxon3")
+effect_name = "Fire Damage"
+description = "Deals damage that burns the enemy"
+spell_range = 0
+metadata/_custom_type_script = "uid://c47qmf75qs0cp"

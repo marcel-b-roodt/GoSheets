@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="SpellEffect" format=3 uid="uid://cry0wmc1nxrg5"]
+
+[ext_resource type="Script" uid="uid://c47qmf75qs0cp" path="res://test_scenes/resources/spell_effect.gd" id="1_0rgye"]
+
+[resource]
+script = ExtResource("1_0rgye")
+effect_name = "Restore Health"
+metadata/_custom_type_script = "uid://c47qmf75qs0cp"

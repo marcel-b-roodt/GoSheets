@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="SpellEffect" format=3 uid="uid://uqlocp4paf62"]
+
+[ext_resource type="Script" uid="uid://c47qmf75qs0cp" path="res://test_scenes/resources/spell_effect.gd" id="1_rv38p"]
+
+[resource]
+script = ExtResource("1_rv38p")
+effect_name = "Restore Mana"
+metadata/_custom_type_script = "uid://c47qmf75qs0cp"

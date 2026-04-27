@@ -1,6 +1,8 @@
 [gd_resource type="Resource" script_class="SpellMetadata" format=3 uid="uid://dn47yhvjkedy2"]
 
 [ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
+[ext_resource type="Resource" uid="uid://uqlocp4paf62" path="res://test_scenes/data/spell_effects/restore_mana.tres" id="2_pdlbn"]
+[ext_resource type="Resource" uid="uid://j75hchabph0c" path="res://test_scenes/data/spell_effects/shock_damage.tres" id="3_f2uo4"]
 
 [resource]
 script = ExtResource("1")
@@ -8,3 +10,4 @@ spell_name = "Arcane Missile"
 description = "A quick, reliable bolt of pure arcane energy. Low cost and no cooldown make it the mage's bread-and-butter."
 mana_cost = 10
 cooldown = 0.5
+spell_effects = Array[Resource]([ExtResource("2_pdlbn"), ExtResource("3_f2uo4")])

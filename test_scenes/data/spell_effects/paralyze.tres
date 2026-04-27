@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="SpellEffect" format=3 uid="uid://i2thvln50awe"]
+
+[ext_resource type="Script" uid="uid://c47qmf75qs0cp" path="res://test_scenes/resources/spell_effect.gd" id="1_glw7y"]
+
+[resource]
+script = ExtResource("1_glw7y")
+effect_name = "Paralyze"
+description = "Freezes teh enemy"
+metadata/_custom_type_script = "uid://c47qmf75qs0cp"

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="SpellEffect" format=3 uid="uid://j75hchabph0c"]
+
+[ext_resource type="Script" uid="uid://c47qmf75qs0cp" path="res://test_scenes/resources/spell_effect.gd" id="1_guk3c"]
+
+[resource]
+script = ExtResource("1_guk3c")
+effect_name = "Shock Damage"
+spell_range = 0
+metadata/_custom_type_script = "uid://c47qmf75qs0cp"

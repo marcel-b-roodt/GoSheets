@@ -8,3 +8,6 @@ addons/gdUnit4/
 # Godot-generated UID sidecar files and import cache
 *.uid
 *.import
+
+# Private local docs (social strategy, release notes, credentials)
+docs/internal/
