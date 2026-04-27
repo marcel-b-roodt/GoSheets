@@ -11,13 +11,6 @@ Completed ✅
 
 Remaining Stage 2
 ------------------
-[ ] 2.7c Resource search/selection panel — searchable popup listing project
-         resources of a given type (or any resource if type unknown). Used
-         by array row editors and single-ref picker cells. This is the
-         foundation for 2.7a (typed array row editor) and 2.7d (save nested
-         resource to file). Build this before expanding collection editors.
-         NOTE: duplicate-key guard in the dict row editor applies to keys
-         only — values (including res:// paths) may repeat and that is valid.
 [ ] 2.6  Inline range slider — for PROPERTY_HINT_RANGE fields where the
          column is wide enough, show a compact HSlider alongside the value.
          (SpinBox already works; slider is additive.)

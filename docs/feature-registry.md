@@ -41,8 +41,8 @@ The single source of truth for every feature's status. Updated after each task s
 | 2.5 | Resource reference picker | ✅ `PROPERTY_HINT_RESOURCE_TYPE` now uses a built-in editor resource picker field in inline cell editing. |
 | 2.6 | Ranged numeric cells | ✅ `PROPERTY_HINT_RANGE` uses spinbox + slider controls with hint-string min/max/step parsing. |
 | 2.7 | Array property cells | ✅ Array and Dictionary cells open a mini editor popup with Apply/Reset. Arrays use path-per-line (typed `Array[Resource]`) or JSON TextEdit (scalar arrays). Dictionaries use a structured key→value row editor with Add/Remove controls; values accept JSON scalars or `res://` paths resolved to Resource objects at commit time. |
-| 2.7a | Array element type inference + typed row editor | 📋 Planned — infer element type from typed-array hint and show per-element controls (including resource pickers) instead of a raw text block. Requires 2.7c. |
-| 2.7c | Resource search/selection panel | 📋 Planned — searchable popup listing project resources of a given type; used by array/dict editors and single-ref picker cells for inserting resources by search rather than typing raw paths. |
+| 2.7a | Array element type inference + typed row editor | ✅ Resource arrays now show a scrollable row list (filename + Browse button + Remove). Browse opens ResourcePickerPopup filtered to the element type. |
+| 2.7c | Resource search/selection panel | ✅ `ResourcePickerPopup` — reads .tres type headers, filters by ClassDB inheritance, live search by filename. Used by array row editor's Browse button and dict value `…` button. |
 | 2.7d | Save nested resource to file | 📋 Planned — from a collection editor, save an inline/unsaved sub-resource out to its own `.tres` file and update the parent reference. |
 | 2.8 | Dirty-state indicator + auto-save option | 📋 Planned |
 | 2.9 | Keyboard navigation | ✅ Enter/F2 open cell; Tab/Shift+Tab navigate editable columns (skipping collapsed), wrap across rows, and cycle at grid boundaries; Escape cancels. |
