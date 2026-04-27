@@ -127,12 +127,15 @@ func _init() -> void:
 
 func setup(
 		is_dictionary: bool,
-		hint: int = PROPERTY_HINT_NONE,
+		_hint: int = PROPERTY_HINT_NONE,
 		hint_string: String = "") -> void:
 	_is_dictionary = is_dictionary
 	_resource_array_mode = false
 	_array_resource_class_hint = ""
-	if not _is_dictionary and hint == PROPERTY_HINT_ARRAY_TYPE:
+	# Always attempt detection — Godot's PROPERTY_HINT_ARRAY_TYPE integer is
+	# inconsistent across versions for GDScript-defined typed arrays.
+	# _detect_resource_array_class returns "" for non-resource arrays, so this is safe.
+	if not _is_dictionary:
 		_array_resource_class_hint = _detect_resource_array_class(hint_string)
 	_update_mode_visibility()
 
