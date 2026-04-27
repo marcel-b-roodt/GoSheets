@@ -2,8 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bk1kbgao3rho1" path="res://test_scenes/resources/spellbook.gd" id="1"]
 [ext_resource type="Resource" uid="uid://ce5hpkqatrhty" path="res://test_scenes/data/spells/fireball.tres" id="2"]
-[ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="2_lbivk"]
-[ext_resource type="Resource" path="res://test_scenes/data/spells/ice_shard.tres" id="3"]
+[ext_resource type="Resource" uid="uid://b2tvp0k5f0ac3" path="res://test_scenes/data/spells/ice_shard.tres" id="3"]
 [ext_resource type="Resource" uid="uid://bjtgd702w1qqw" path="res://test_scenes/data/spells/chain_lightning.tres" id="4"]
 [ext_resource type="Resource" path="res://test_scenes/data/spells/stone_wall.tres" id="5"]
 [ext_resource type="Resource" uid="uid://bsc3ycalq0nfb" path="res://test_scenes/data/spells/gale_force.tres" id="6"]
@@ -12,4 +11,4 @@
 [resource]
 script = ExtResource("1")
 owner_name = "Sorcerer"
-spells = Array[ExtResource("2_lbivk")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
+spells = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])

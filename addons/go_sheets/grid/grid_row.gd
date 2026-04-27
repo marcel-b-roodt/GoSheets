@@ -94,7 +94,11 @@ func bind(
 			continue
 		lbl.position = Vector2(x_offsets[i] + 4, 0)
 		lbl.size = Vector2(col.width - 8, ROW_HEIGHT)
-		lbl.text = _format_value(resource.get(col.property_name), col)
+		# Synthetic filename column: show the resource filename, not a property.
+		if col.property_name == &"__filename__":
+			lbl.text = resource.resource_path.get_file()
+		else:
+			lbl.text = _format_value(resource.get(col.property_name), col)
 		lbl.show()
 
 	# Hide surplus labels

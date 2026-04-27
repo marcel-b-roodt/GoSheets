@@ -352,6 +352,9 @@ func _handle_header_click(event: InputEvent, vis: Array, lx: float, rz: int, ci:
 				vis[ci].collapsed = false
 				_rebuild()
 				column_layout_changed.emit()
+			elif vis[ci].pinned:
+				# Pinned columns cannot be reordered — treat as no-op.
+				pass
 			else:
 				_header_press_col = ci
 				_header_press_x = lx
@@ -559,7 +562,11 @@ func _on_row_clicked(row_index: int) -> void:
 
 ## Called when the user double-clicks a cell.
 ## Opens the CellEditor popup positioned over the clicked cell.
+## Pinned columns (e.g. the filename column) are read-only — editing is blocked.
 func _on_cell_edit_requested(row_index: int, col_index: int) -> void:
+	var vis := _column_model.visible_columns() if _column_model else []
+	if col_index >= 0 and col_index < vis.size() and vis[col_index].pinned:
+		return
 	_edit_row = row_index
 	_edit_col = col_index
 	_open_editor_at(row_index, col_index)
@@ -582,7 +589,7 @@ func _on_cell_tab_pressed(is_shift: bool) -> void:
 		return
 	var editable_cols: Array[int] = []
 	for i in vis.size():
-		if not vis[i].collapsed:
+		if not vis[i].collapsed and not vis[i].pinned:
 			editable_cols.append(i)
 	if editable_cols.is_empty():
 		return

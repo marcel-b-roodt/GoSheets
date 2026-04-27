@@ -22,12 +22,14 @@ var columns: Array[ColumnDef] = []
 
 ## Build a ColumnModel for [param type_name] using ClassDB property info.
 ## Applies saved layout from [param saved_dicts] if provided.
+## Always injects a synthetic read-only filename column as the first column.
 static func build(type_name: StringName, saved_dicts: Array = []) -> ColumnModel:
 	var model := ColumnModel.new()
 	var raw_props := _get_export_properties(type_name)
 
 	if saved_dicts.is_empty():
-		# First time: create ColumnDefs from script properties
+		# First time: inject filename column then create ColumnDefs from properties
+		model.columns.append(_make_filename_column())
 		for prop: Dictionary in raw_props:
 			model.columns.append(
 				_COLUMN_DEF_SCRIPT.new(
@@ -47,8 +49,16 @@ static func build(type_name: StringName, saved_dicts: Array = []) -> ColumnModel
 			prop_info[prop.name] = prop
 
 		var seen: Dictionary = {}
+		var has_filename := false
 		for d: Dictionary in saved_dicts:
 			var col: ColumnDef = _COLUMN_DEF_SCRIPT.from_dict(d)
+			if col.property_name == _COLUMN_DEF_SCRIPT.FILENAME_COLUMN:
+				has_filename = true
+				# Re-apply synthetic defaults — pinned/read-only can't be saved away
+				col.pinned = true
+				model.columns.append(col)
+				seen[_COLUMN_DEF_SCRIPT.FILENAME_COLUMN] = true
+				continue
 			# Overwrite type metadata with current live definition.
 			if prop_info.has(col.property_name):
 				var live: Dictionary = prop_info[col.property_name]
@@ -57,6 +67,9 @@ static func build(type_name: StringName, saved_dicts: Array = []) -> ColumnModel
 				col.hint_string   = live.hint_string
 			model.columns.append(col)
 			seen[col.property_name] = true
+		# If layout pre-dates the filename column, inject it at the front
+		if not has_filename:
+			model.columns.insert(0, _make_filename_column())
 		for prop: Dictionary in raw_props:
 			if not seen.has(prop.name):
 				model.columns.append(
@@ -69,6 +82,19 @@ static func build(type_name: StringName, saved_dicts: Array = []) -> ColumnModel
 				)
 
 	return model
+
+
+static func _make_filename_column() -> ColumnDef:
+	var col := _COLUMN_DEF_SCRIPT.new(
+		_COLUMN_DEF_SCRIPT.FILENAME_COLUMN,
+		TYPE_STRING,
+		PROPERTY_HINT_NONE,
+		""
+	)
+	col.display_name = "File"
+	col.pinned = true
+	col.width  = 140
+	return col
 
 
 ## Return only the visible columns, pinned ones first.

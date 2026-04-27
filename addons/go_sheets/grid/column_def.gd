@@ -6,6 +6,9 @@
 class_name ColumnDef
 extends RefCounted
 
+## Special sentinel for the synthetic resource-filename column.
+const FILENAME_COLUMN: StringName = &"__filename__"
+
 ## Internal property name as returned by ClassDB / get_property_list().
 var property_name: StringName = &""
 ## Human-readable header label (defaults to property_name with _ replaced by space).
