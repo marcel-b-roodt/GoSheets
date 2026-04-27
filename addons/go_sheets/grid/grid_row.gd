@@ -27,6 +27,8 @@ var _bound_x_offsets: Array[int] = []
 
 # Background panel for selection highlight
 var _bg: ColorRect
+## Subtle dark overlay behind pinned (read-only) columns.
+var _pinned_col_bg: ColorRect
 
 
 func _ready() -> void:
@@ -49,6 +51,11 @@ func _ensure_setup() -> void:
 	_bg.color = Color.TRANSPARENT
 	_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_bg)
+	_pinned_col_bg = ColorRect.new()
+	_pinned_col_bg.color = Color(0.0, 0.0, 0.0, 0.18)
+	_pinned_col_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pinned_col_bg.hide()
+	add_child(_pinned_col_bg)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	gui_input.connect(_on_gui_input)
 
@@ -94,6 +101,11 @@ func bind(
 			continue
 		lbl.position = Vector2(x_offsets[i] + 4, 0)
 		lbl.size = Vector2(col.width - 8, ROW_HEIGHT)
+		# Pinned (read-only) columns get dimmed text.
+		if col.pinned:
+			lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.5))
+		else:
+			lbl.remove_theme_color_override("font_color")
 		# Synthetic filename column: show the resource filename, not a property.
 		if col.property_name == &"__filename__":
 			lbl.text = resource.resource_path.get_file()
@@ -105,7 +117,22 @@ func bind(
 	for i in range(columns.size(), _labels.size()):
 		_labels[i].hide()
 
-	# Background tint
+	# Pinned-column background — covers all pinned columns with a dark tint
+	# to signal they are read-only. Computed after all labels are positioned.
+	var pinned_right := 0
+	for i in columns.size():
+		if columns[i].pinned and not columns[i].collapsed:
+			var right := x_offsets[i] + columns[i].width
+			if right > pinned_right:
+				pinned_right = right
+	if pinned_right > 0:
+		_pinned_col_bg.position = Vector2.ZERO
+		_pinned_col_bg.size = Vector2(pinned_right, ROW_HEIGHT)
+		_pinned_col_bg.show()
+	else:
+		_pinned_col_bg.hide()
+
+	# Row-level background tint
 	if is_selected:
 		_bg.color = Color(0.2, 0.5, 1.0, 0.35)
 	elif index % 2 == 0:
