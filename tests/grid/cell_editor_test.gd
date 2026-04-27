@@ -379,6 +379,37 @@ func test_dictionary_collection_apply_emits_committed_dictionary() -> void:
 	editor.queue_free()
 
 
+func test_resource_array_collection_apply_emits_resources_not_strings() -> void:
+	var editor := CellEditor.new()
+	add_child(editor)
+	await await_signal_on(editor, "ready")
+
+	var committed := false
+	var committed_new: Variant = null
+	editor.value_committed.connect(func(_r, _p, _o, n):
+		committed = true
+		committed_new = n)
+
+	var owner := CollectionOwner.new()
+	var col := ColumnDef.new(&"spell_refs", TYPE_ARRAY, PROPERTY_HINT_ARRAY_TYPE, "SpellMetadata")
+	editor.open(owner, col, Rect2i(100, 100, 280, 24))
+	await await_signal_on(editor, "visibility_changed")
+
+	editor._inner._text_edit.text = "res://test_scenes/data/spells/fireball.tres"
+	editor._inner._on_apply_pressed()
+
+	assert_bool(committed).is_true()
+	assert_bool(committed_new is Array).is_true()
+	assert_int((committed_new as Array).size()).is_equal(1)
+	assert_bool((committed_new as Array)[0] is Resource).is_true()
+	assert_bool(((committed_new as Array)[0] as Resource).resource_path ==
+		"res://test_scenes/data/spells/fireball.tres").is_true()
+	assert_bool(editor.visible).is_false()
+
+	remove_child(editor)
+	editor.queue_free()
+
+
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
@@ -401,6 +432,7 @@ class ResourceOwner extends Resource:
 class CollectionOwner extends Resource:
 	var values: Array = []
 	var mapping: Dictionary = {}
+	var spell_refs: Array[SpellMetadata] = []
 
 
 func _make_dummy_resource() -> Resource:

@@ -43,7 +43,7 @@ func test_set_and_get_value_round_trip_resource() -> void:
 	res.label = "alpha"
 	field.set_value(res)
 
-	var out := field.get_value()
+	var out: Variant = field.get_value()
 	assert_object(out).is_not_null()
 	assert_bool(out is DummyResource).is_true()
 	assert_str((out as DummyResource).label).is_equal("alpha")

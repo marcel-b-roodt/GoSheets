@@ -1,3 +1,4 @@
+@tool
 ## CollectionCellField
 ##
 ## Mini editor for Array and Dictionary values using JSON text.
@@ -8,6 +9,8 @@ extends CellField
 
 var _is_dictionary: bool = false
 var _value: Variant = []
+var _resource_array_mode: bool = false
+var _array_resource_class_hint: String = ""
 
 var _container: VBoxContainer
 var _text_edit: TextEdit
@@ -52,8 +55,15 @@ func _init() -> void:
 	actions.add_child(_reset_button)
 
 
-func setup(is_dictionary: bool) -> void:
+func setup(
+		is_dictionary: bool,
+		hint: int = PROPERTY_HINT_NONE,
+		hint_string: String = "") -> void:
 	_is_dictionary = is_dictionary
+	_resource_array_mode = false
+	_array_resource_class_hint = ""
+	if not _is_dictionary and hint == PROPERTY_HINT_ARRAY_TYPE:
+		_array_resource_class_hint = _detect_resource_array_class(hint_string)
 
 
 func set_value(value: Variant) -> void:
@@ -61,7 +71,13 @@ func set_value(value: Variant) -> void:
 		_value = value if value is Dictionary else {}
 	else:
 		_value = value if value is Array else []
-	_text_edit.text = JSON.stringify(_value, "  ")
+	if _is_dictionary:
+		_resource_array_mode = false
+	elif _array_resource_class_hint != "" or _array_contains_resources(_value):
+		_resource_array_mode = true
+	else:
+		_resource_array_mode = false
+	_text_edit.text = _format_value_for_editor(_value)
 	_clear_error()
 
 
@@ -88,11 +104,14 @@ func _on_apply_pressed() -> void:
 
 
 func _on_reset_pressed() -> void:
-	_text_edit.text = JSON.stringify(_value, "  ")
+	_text_edit.text = _format_value_for_editor(_value)
 	_clear_error()
 
 
 func _parse_current_text() -> Variant:
+	if _resource_array_mode and not _is_dictionary:
+		return _parse_resource_path_lines()
+
 	var parser := JSON.new()
 	var err := parser.parse(_text_edit.text)
 	if err != OK:
@@ -106,6 +125,69 @@ func _parse_current_text() -> Variant:
 		_set_error("Expected an Array JSON value")
 		return null
 	return data
+
+
+func _format_value_for_editor(value: Variant) -> String:
+	if _resource_array_mode and value is Array:
+		var lines: Array[String] = []
+		for entry in value as Array:
+			if entry is Resource:
+				var res := entry as Resource
+				if res.resource_path != "":
+					lines.append(res.resource_path)
+		return "\n".join(lines)
+	return JSON.stringify(value, "  ")
+
+
+func _parse_resource_path_lines() -> Variant:
+	var out: Array[Resource] = []
+	var lines := _text_edit.text.split("\n", false)
+	for raw_line: String in lines:
+		var path := raw_line.strip_edges()
+		if path == "":
+			continue
+		if not path.begins_with("res://"):
+			_set_error("Resource paths must start with res://")
+			return null
+		var loaded := ResourceLoader.load(path)
+		if loaded == null:
+			_set_error("Could not load resource: %s" % path)
+			return null
+		if not (loaded is Resource):
+			_set_error("Loaded value is not a Resource: %s" % path)
+			return null
+		if _array_resource_class_hint != "" and not _matches_resource_class_hint(loaded):
+			_set_error("Resource type mismatch for path: %s" % path)
+			return null
+		out.append(loaded)
+	return out
+
+
+func _array_contains_resources(value: Variant) -> bool:
+	if not (value is Array):
+		return false
+	for entry in value as Array:
+		if entry is Resource:
+			return true
+	return false
+
+
+func _detect_resource_array_class(hint_string: String) -> String:
+	if hint_string == "":
+		return ""
+	if hint_string.find("Resource") >= 0:
+		return "Resource"
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		var class_name := str(entry.get("class", ""))
+		if class_name != "" and hint_string.find(class_name) >= 0:
+			return class_name
+	return ""
+
+
+func _matches_resource_class_hint(resource: Resource) -> bool:
+	if _array_resource_class_hint == "" or _array_resource_class_hint == "Resource":
+		return true
+	return ClassDB.is_parent_class(resource.get_class(), _array_resource_class_hint)
 
 
 func _set_error(message: String) -> void:

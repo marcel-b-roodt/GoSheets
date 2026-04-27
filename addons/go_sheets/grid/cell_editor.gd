@@ -11,7 +11,8 @@
 ##   • bool                            → CheckBox
 ##   • Color                           → ColorPickerButton
 ##   • int with PROPERTY_HINT_ENUM     → OptionButton
-##   (Resource-reference cells are read-only for now; Stage 2.5 adds a picker)
+##   • object with PROPERTY_HINT_RESOURCE_TYPE → Editor resource picker
+##   • Array / Dictionary              → JSON mini editor
 ##
 ## Emits value_committed when the user confirms a new value.
 
@@ -143,11 +144,14 @@ func _apply_popup_size(screen_rect: Rect2i) -> void:
 	var popup_w := maxi(screen_rect.size.x, _MIN_WIDTH)
 	var content_h := screen_rect.size.y
 	var min_h := screen_rect.size.y
+	var min_w := popup_w
 	var inner_min_size := Vector2.ZERO
 	if _inner != null:
 		inner_min_size = _inner.get_combined_minimum_size()
+		min_w = int(ceil(inner_min_size.x)) + (_POPUP_PADDING * 2)
 		min_h = int(ceil(inner_min_size.y)) + (_POPUP_PADDING * 2)
 		content_h = maxi(screen_rect.size.y, min_h)  # At least row height, expand if needed
+		popup_w = maxi(popup_w, min_w)
 
 		size = Vector2i(popup_w, content_h)
 		_inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -162,6 +166,7 @@ func _apply_popup_size(screen_rect: Rect2i) -> void:
 		print("CellEditor._apply_popup_size:")
 		print("  screen_rect: %s" % screen_rect)
 		print("  inner min_size: %s" % inner_min_size)
+		print("  calculated min_w (inner + padding): %d" % min_w)
 		print("  calculated min_h (inner + padding): %d" % min_h)
 		print("  row height: %d" % screen_rect.size.y)
 		print("  final content_h: %d" % content_h)
@@ -208,12 +213,12 @@ func _rebuild_inner(col: ColumnDef, current: Variant) -> void:
 		match col.property_type:
 			TYPE_ARRAY:
 				var field := _COLLECTION_CELL_FIELD.new()
-				field.setup(false)
+				field.setup(false, col.hint, col.hint_string)
 				field.set_value(current)
 				_inner = field
 			TYPE_DICTIONARY:
 				var field := _COLLECTION_CELL_FIELD.new()
-				field.setup(true)
+				field.setup(true, col.hint, col.hint_string)
 				field.set_value(current)
 				_inner = field
 			TYPE_BOOL:

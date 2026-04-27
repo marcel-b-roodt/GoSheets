@@ -93,3 +93,48 @@ func test_apply_rejects_wrong_collection_kind() -> void:
 
 	remove_child(field)
 	field.queue_free()
+
+
+func test_resource_array_set_value_formats_as_path_lines() -> void:
+	var field := CollectionCellField.new()
+	field.setup(false, PROPERTY_HINT_ARRAY_TYPE, "SpellMetadata")
+	add_child(field)
+	await await_signal_on(field, "ready")
+
+	var fireball := load("res://test_scenes/data/spells/fireball.tres")
+	field.set_value([fireball])
+
+	assert_bool(field._resource_array_mode).is_true()
+	assert_bool(
+		field._text_edit.text.find("res://test_scenes/data/spells/fireball.tres") >= 0
+	).is_true()
+	assert_bool(field._text_edit.text.find("<Resource#") < 0).is_true()
+
+	remove_child(field)
+	field.queue_free()
+
+
+func test_apply_resource_paths_emits_resource_array() -> void:
+	var field := CollectionCellField.new()
+	field.setup(false, PROPERTY_HINT_ARRAY_TYPE, "SpellMetadata")
+	add_child(field)
+	await await_signal_on(field, "ready")
+
+	var emitted: Variant = null
+	field.value_changed.connect(func(v): emitted = v)
+
+	field.set_value([])
+	field._text_edit.text = (
+		"res://test_scenes/data/spells/fireball.tres\n"
+		+ "res://test_scenes/data/spells/ice_shard.tres"
+	)
+	field._on_apply_pressed()
+
+	assert_bool(emitted is Array).is_true()
+	assert_int((emitted as Array).size()).is_equal(2)
+	assert_bool((emitted as Array)[0] is Resource).is_true()
+	assert_bool((emitted as Array)[1] is Resource).is_true()
+	assert_bool(field._error_label.visible).is_false()
+
+	remove_child(field)
+	field.queue_free()
