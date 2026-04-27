@@ -53,6 +53,9 @@ Make the grid editable so developers can tweak values without opening the Inspec
 | 2.5 | Resource reference cells — `PROPERTY_HINT_RESOURCE_TYPE` renders as a button; click opens Godot's standard `EditorInterface` resource picker | |
 | 2.6 | Ranged numeric cells — `PROPERTY_HINT_RANGE` int/float renders as a `SpinBox` (min/max/step from hint_string); optional inline slider if space allows | |
 | 2.7 | Array property cells — collapsed summary view with expand-to-edit | `Array[int]`, `Array[String]`, etc. |
+| 2.7a | Array element type inference — infer or read the typed-array hint to drive per-element controls in the array row editor | Enables typed editing; `Array[SpellMetadata]` shows resource pickers per row |
+| 2.7c | Resource search/selection panel — searchable popup listing all resources of a given type; replaces bare path-entry for resource fields inside collection editors | Foundation for 2.7a and inline array/dict resource assignment |
+| 2.7d | Save nested/inline resource to file — from a collection editor, save an unsaved sub-resource out to its own `.tres` file; updates the parent's reference | Mirrors Godot's "Save as external resource" action |
 | 2.8 | Dirty-state indicator — mark rows/cells with unsaved changes; auto-save on focus loss (configurable) | |
 | 2.9 | Keyboard navigation — Tab/Shift-Tab between cells, Enter to confirm, Escape to cancel | |
 
@@ -89,7 +92,7 @@ Fine-grained control over which properties are shown and how.
 | 4.3b | Double-click divider auto-fit (QoL) — in Sheets view, double-click a divider to size the column to its visible content/header, clamped to a max width cap | Prevents very long content from creating overly wide columns |
 | 4.3a | Column collapse — click ◀ in header to collapse to 16px strip with tooltip; click ▶ to expand; ⊞ to expand all | ✅ |
 | 4.4 | Computed / derived columns — user-defined GDScript expression per column (e.g. `damage * speed`) | Read-only; expression sandbox |
-| 4.5 | Nested resource expansion — expand a `Resource` reference cell to show its own properties as sub-columns | Depth-limited (max 2) |
+| 4.5 | Nested resource expansion — expand a `Resource` reference cell to show its own properties as sub-columns | Depth-limited (max 2); full inline nested-resource editing (search, wire, save to file) is the long-term goal here |
 | 4.6 | Per-type layout profiles — save named column layouts and switch between them | |
 
 **Exit criteria:** Developer can configure exactly which columns appear, in what order, and at what width, and save those layouts per resource type.
