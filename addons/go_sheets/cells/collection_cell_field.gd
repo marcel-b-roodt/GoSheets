@@ -178,9 +178,9 @@ func _detect_resource_array_class(hint_string: String) -> String:
 	if hint_string.find("Resource") >= 0:
 		return "Resource"
 	for entry: Dictionary in ProjectSettings.get_global_class_list():
-		var class_name := str(entry.get("class", ""))
-		if class_name != "" and hint_string.find(class_name) >= 0:
-			return class_name
+		var entry_class := str(entry.get("class", ""))
+		if entry_class != "" and hint_string.find(entry_class) >= 0:
+			return entry_class
 	return ""
 
 
