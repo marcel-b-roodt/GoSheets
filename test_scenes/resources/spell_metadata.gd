@@ -16,6 +16,10 @@ enum Element {
 	ARCANE    = 5,
 }
 
+# Self-preloads
+# SpellEffect is used in compile-time type annotations below.
+const _SPELL_EFFECT_SCRIPT := preload("res://test_scenes/resources/spell_effect.gd")
+
 ## Display name shown in UI and the spellbook.
 @export var spell_name: String = ""
 ## Full flavour/mechanical description.
@@ -28,3 +32,5 @@ enum Element {
 @export var element: Element = Element.ARCANE
 ## Whether the player has unlocked this spell.
 @export var is_unlocked: bool = true
+## Optional gameplay effects applied when this spell resolves.
+@export var spell_effects: Array[SpellEffect] = []

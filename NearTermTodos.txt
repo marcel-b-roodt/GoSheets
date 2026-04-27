@@ -14,6 +14,8 @@ Remaining Stage 2
 [ ] 2.6  Inline range slider — for PROPERTY_HINT_RANGE fields where the
          column is wide enough, show a compact HSlider alongside the value.
          (SpinBox already works; slider is additive.)
+[ ] 2.7b Dictionary row editor UX — replace raw JSON-only dictionary editing
+         with explicit key/value row fields (+ add/remove controls).
 [ ] 2.8  Dirty-state indicator — tint unsaved rows; auto-save on focus loss.
 [x] 2.9  Keyboard navigation — Enter/F2 open edit mode; Tab/Shift+Tab navigate
           cells; Escape cancels edit. ✅ Core wired up; Tab focus leak unresolved

@@ -40,7 +40,7 @@ The single source of truth for every feature's status. Updated after each task s
 | 2.4 | Enum support | ✅ `PROPERTY_HINT_ENUM` editing via `OptionButton` is implemented in the popup editor. |
 | 2.5 | Resource reference picker | ✅ `PROPERTY_HINT_RESOURCE_TYPE` now uses a built-in editor resource picker field in inline cell editing. |
 | 2.6 | Ranged numeric cells | ✅ `PROPERTY_HINT_RANGE` uses spinbox + slider controls with hint-string min/max/step parsing. |
-| 2.7 | Array property cells | ✅ Array and Dictionary cells now open a mini JSON editor popup with Apply/Reset, type validation, and inline commit. |
+| 2.7 | Array property cells | 🔧 Array and Dictionary cells now open a mini JSON editor popup with Apply/Reset, type validation, and inline commit; dedicated Dictionary key/value row editor UX remains planned. |
 | 2.8 | Dirty-state indicator + auto-save option | 📋 Planned |
 | 2.9 | Keyboard navigation | ✅ Enter/F2 open cell; Tab/Shift+Tab navigate editable columns (skipping collapsed), wrap across rows, and cycle at grid boundaries; Escape cancels. |
 
