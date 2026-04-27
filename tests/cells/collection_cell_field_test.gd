@@ -92,9 +92,9 @@ func test_dict_apply_emits_value_changed() -> void:
 	field.value_changed.connect(func(v): emitted = v)
 
 	field.set_value({"hp": "100"})
-	# Mutate the first row's value edit
+	# Mutate the first row's value edit (now accessed by name)
 	var row := field._dict_rows.get_child(0) as HBoxContainer
-	var val_edit := row.get_child(2) as LineEdit
+	var val_edit := row.get_node_or_null("ValueEdit") as LineEdit
 	val_edit.text = "999"
 	field._on_apply_pressed()
 
@@ -147,7 +147,7 @@ func test_dict_reset_restores_rows() -> void:
 	field.queue_free()
 
 
-func test_resource_array_set_value_formats_as_path_lines() -> void:
+func test_resource_array_set_value_creates_rows() -> void:
 	var field := CollectionCellField.new()
 	field.setup(false, PROPERTY_HINT_ARRAY_TYPE, "SpellMetadata")
 	add_child(field)
@@ -157,16 +157,21 @@ func test_resource_array_set_value_formats_as_path_lines() -> void:
 	field.set_value([fireball])
 
 	assert_bool(field._resource_array_mode).is_true()
-	assert_bool(
-		field._text_edit.text.find("res://test_scenes/data/spells/fireball.tres") >= 0
-	).is_true()
-	assert_bool(field._text_edit.text.find("<Resource#") < 0).is_true()
+	# One row should exist; its PathLabel should contain the filename
+	assert_int(field._resource_rows.get_child_count()).is_equal(1)
+	var row := field._resource_rows.get_child(0) as HBoxContainer
+	var lbl := row.get_node_or_null("PathLabel") as Label
+	assert_bool(lbl != null).is_true()
+	assert_bool(lbl.tooltip_text.contains("fireball.tres")).is_true()
+	# Text edit should be hidden; resource scroll should be visible
+	assert_bool(field._text_edit.visible).is_false()
+	assert_bool(field._resource_scroll.visible).is_true()
 
 	remove_child(field)
 	field.queue_free()
 
 
-func test_apply_resource_paths_emits_resource_array() -> void:
+func test_apply_resource_rows_emits_resource_array() -> void:
 	var field := CollectionCellField.new()
 	field.setup(false, PROPERTY_HINT_ARRAY_TYPE, "SpellMetadata")
 	add_child(field)
@@ -176,10 +181,8 @@ func test_apply_resource_paths_emits_resource_array() -> void:
 	field.value_changed.connect(func(v): emitted = v)
 
 	field.set_value([])
-	field._text_edit.text = (
-		"res://test_scenes/data/spells/fireball.tres\n"
-		+ "res://test_scenes/data/spells/ice_shard.tres"
-	)
+	field._append_resource_row("res://test_scenes/data/spells/fireball.tres")
+	field._append_resource_row("res://test_scenes/data/spells/ice_shard.tres")
 	field._on_apply_pressed()
 
 	assert_bool(emitted is Array).is_true()
