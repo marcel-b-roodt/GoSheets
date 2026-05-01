@@ -13,6 +13,10 @@
 ##   • int with PROPERTY_HINT_ENUM     → OptionButton
 ##   • object with PROPERTY_HINT_RESOURCE_TYPE → Editor resource picker
 ##   • Array / Dictionary              → JSON mini editor
+##   • Vector2/2i/3/3i/4/4i           → VectorCellField (comma-separated LineEdit)
+##   • Rect2/Rect2i, Plane, AABB       → VectorCellField
+##   • Transform2D/3D, Basis, Quaternion → VectorCellField
+##   • NodePath                        → VectorCellField (plain text)
 ##
 ## Emits value_committed when the user confirms a new value.
 
@@ -44,6 +48,7 @@ const _ENUM_CELL_FIELD       := preload("res://addons/go_sheets/cells/enum_cell_
 const _COLOR_CELL_FIELD      := preload("res://addons/go_sheets/cells/color_cell_field.gd")
 const _RESOURCE_REF_CELL_FIELD := preload("res://addons/go_sheets/cells/resource_ref_cell_field.gd")
 const _COLLECTION_CELL_FIELD := preload("res://addons/go_sheets/cells/collection_cell_field.gd")
+const _VECTOR_CELL_FIELD     := preload("res://addons/go_sheets/cells/vector_cell_field.gd")
 
 const _MIN_WIDTH             := 48
 const _POPUP_PADDING         := 4
@@ -210,7 +215,8 @@ func _rebuild_inner(col: ColumnDef, current: Variant) -> void:
 		field.set_value(current)
 		_inner = field
 	else:
-		match col.property_type:
+		var ptype := col.property_type
+		match ptype:
 			TYPE_ARRAY:
 				var field := _COLLECTION_CELL_FIELD.new()
 				field.setup(false, col.hint, col.hint_string)
@@ -242,8 +248,13 @@ func _rebuild_inner(col: ColumnDef, current: Variant) -> void:
 				field.set_value(str(current) if current != null else "")
 				_inner = field
 			_:
-				# Unsupported type — close immediately rather than show an empty popup.
-				return
+				if _is_struct_type(ptype):
+					var field := _VECTOR_CELL_FIELD.new()
+					field.setup(ptype, current)
+					_inner = field
+				else:
+					# Unsupported type — close immediately rather than show an empty popup.
+					return
 
 	if _inner != null:
 		add_child(_inner)
@@ -274,6 +285,18 @@ func _focus_inner() -> void:
 		_inner.focus_main()
 	else:
 		_inner.grab_focus()
+
+
+static func _is_struct_type(ptype: int) -> bool:
+	return ptype in [
+		TYPE_VECTOR2, TYPE_VECTOR2I, TYPE_VECTOR3, TYPE_VECTOR3I,
+		TYPE_VECTOR4, TYPE_VECTOR4I,
+		TYPE_RECT2, TYPE_RECT2I,
+		TYPE_TRANSFORM2D, TYPE_TRANSFORM3D,
+		TYPE_BASIS, TYPE_QUATERNION,
+		TYPE_AABB, TYPE_PLANE,
+		TYPE_NODE_PATH,
+	]
 
 
 # ---------------------------------------------------------------------------

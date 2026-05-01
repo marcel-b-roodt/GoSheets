@@ -23,7 +23,7 @@ The single source of truth for every feature's status. Updated after each task s
 | 1.1 | Type selector dropdown | ✅ Implemented in the main toolbar and populated from the type registry. |
 | 1.2 | Auto-derived column definitions from `@export` properties | ✅ ColumnModel builds columns from exported properties and restores saved layouts. |
 | 1.3 | Grid renderer with virtual/pooled rows | ✅ ResourceGrid and GridRow provide the read-only spreadsheet surface with recycled rows. |
-| 1.4 | Read-only cell display (all scalar + reference types) | 🔧 Core scalar/resource display is in place; broader type coverage can still expand. |
+| 1.4 | Read-only cell display (all scalar + reference types) | ✅ All scalar types, vectors, transforms, NodePath, and resource references display with dedicated formatting. Collection types show item counts. Editing support for struct types (Vector, Rect, Transform, etc.) uses comma-separated LineEdit via VectorCellField. |
 | 1.5 | Row selection + Inspector sync | ✅ Selecting a row forwards the resource into Godot's Inspector. |
 | 1.6 | Column visibility toggle | ✅ Visibility/collapse state is implemented and persisted through saved layouts. |
 | 1.7 | Column reordering | ✅ Header drag-reorder is implemented and persisted through saved column layouts. |
@@ -34,7 +34,7 @@ The single source of truth for every feature's status. Updated after each task s
 
 | # | Feature | Status |
 |---|---|---|
-| 2.1 | Inline cell editing | 🔧 Popup editor supports string, bool, enum, color, and numeric fields. Range-backed numeric popup editors now show slider + spinbox controls and commit pending values on close; resource picker, arrays, and inline-in-row embedding remain pending. |
+| 2.1 | Inline cell editing | ✅ All scalar, enum, color, resource, vector, struct, and collection types have dedicated cell editors. Vector/struct types use comma-separated LineEdit (VectorCellField). |
 | 2.2 | Undo/redo integration | ✅ Inline cell edits are applied through `EditorUndoRedoManager`, saved to disk, and refreshed back into the grid / Inspector. |
 | 2.3 | Multi-cell batch edit | 📋 Planned |
 | 2.4 | Enum support | ✅ `PROPERTY_HINT_ENUM` editing via `OptionButton` is implemented in the popup editor. |

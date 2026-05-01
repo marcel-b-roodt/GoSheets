@@ -8,6 +8,9 @@ Completed ✅
 [x] 2-C  Full Undo/Redo via EditorUndoRedoManager + ResourceSaver on do/undo
 [x]      Context menu multi-monitor fix (DisplayServer.mouse_get_position)
 [x]      Enum display names (PROPERTY_HINT_ENUM + hint_string resolution)
+[x] 1.4  Dedicated read-only display formatting for all Variant types (vectors,
+         transforms, rects, planes, quaternions, AABB, NodePath, etc.)
+[x] 2.1  Inline editing for all struct/vector/NodePath types (VectorCellField)
 
 Remaining Stage 2
 ------------------
@@ -16,8 +19,7 @@ Remaining Stage 2
          (SpinBox already works; slider is additive.)
 [ ] 2.8  Dirty-state indicator — tint unsaved rows; auto-save on focus loss.
 [x] 2.9  Keyboard navigation — Enter/F2 open edit mode; Tab/Shift+Tab navigate
-          cells; Escape cancels edit. ✅ Core wired up; Tab focus leak unresolved
-          (Stage 2.8 in feature-registry updated).
+          cells; Escape cancels edit.
 [ ] 2.3  Multi-cell edit — select multiple rows (Shift/Ctrl+click) and batch-
          edit a shared property; single undo action for the whole batch.
 [ ] 2.10 Inline embed (future) — instead of popup, render the edit control

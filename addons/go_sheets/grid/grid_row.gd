@@ -165,8 +165,52 @@ static func _format_value(value: Variant, col: ColumnDef) -> String:
 			var f: float = float(value)
 			if abs(f - round(f)) < 0.0001:
 				return str(int(f))
-			# %g is not supported in GDScript; use %f then strip trailing zeros.
 			return ("%.4f" % f).rstrip("0").rstrip(".")
+		TYPE_VECTOR2:
+			var v: Vector2 = value
+			return "(%.4f, %.4f)" % [v.x, v.y]
+		TYPE_VECTOR2I:
+			var v: Vector2i = value
+			return "(%d, %d)" % [v.x, v.y]
+		TYPE_VECTOR3:
+			var v: Vector3 = value
+			return "(%.4f, %.4f, %.4f)" % [v.x, v.y, v.z]
+		TYPE_VECTOR3I:
+			var v: Vector3i = value
+			return "(%d, %d, %d)" % [v.x, v.y, v.z]
+		TYPE_VECTOR4:
+			var v: Vector4 = value
+			return "(%.4f, %.4f, %.4f, %.4f)" % [v.x, v.y, v.z, v.w]
+		TYPE_VECTOR4I:
+			var v: Vector4i = value
+			return "(%d, %d, %d, %d)" % [v.x, v.y, v.z, v.w]
+		TYPE_RECT2:
+			var r: Rect2 = value
+			return "Rect2(%.4f, %.4f, %.4f, %.4f)" % [r.position.x, r.position.y, r.size.x, r.size.y]
+		TYPE_RECT2I:
+			var r: Rect2i = value
+			return "Rect2i(%d, %d, %d, %d)" % [r.position.x, r.position.y, r.size.x, r.size.y]
+		TYPE_TRANSFORM2D:
+			var t: Transform2D = value
+			return "Transform2D(%.4f, %.4f)" % [t.origin.x, t.origin.y]
+		TYPE_TRANSFORM3D:
+			var t: Transform3D = value
+			return "Transform3D(%.4f, %.4f, %.4f)" % [t.origin.x, t.origin.y, t.origin.z]
+		TYPE_BASIS:
+			var b: Basis = value
+			return "Basis(%.4f, %.4f, %.4f)" % [b.x.x, b.y.y, b.z.z]
+		TYPE_QUATERNION:
+			var q: Quaternion = value
+			return "Quat(%.4f, %.4f, %.4f, %.4f)" % [q.x, q.y, q.z, q.w]
+		TYPE_AABB:
+			var a: AABB = value
+			return "AABB(%.4f, %.4f, %.4f)" % [a.position.x, a.position.y, a.position.z]
+		TYPE_PLANE:
+			var p: Plane = value
+			return "Plane(%.4f, %.4f, %.4f, %.4f)" % [p.normal.x, p.normal.y, p.normal.z, p.d]
+		TYPE_NODE_PATH:
+			var np: NodePath = value
+			return str(np) if !np.is_empty() else "<empty>"
 		TYPE_ARRAY:
 			var arr := value as Array
 			if arr == null:
