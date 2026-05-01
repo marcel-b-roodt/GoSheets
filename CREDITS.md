@@ -20,7 +20,7 @@ Thank you to everyone supporting GoSheets on Patreon. Your contributions keep de
 
 *Be the first — [support on Patreon](https://patreon.com/gosheets_godot)*
 
-### 🩨 Supporters
+### 🪨 Supporters
 
 *Be the first — [support on Patreon](https://patreon.com/gosheets_godot)*
 
