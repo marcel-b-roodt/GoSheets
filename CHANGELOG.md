@@ -4,6 +4,10 @@ All notable changes to GoSheets will be documented in this file.
 
 ## [Unreleased]
 
+---
+
+## [0.1.2] — 2026-05-05
+
 ### Added
 - Dirty-state indicator — amber tint on rows with unsaved changes; Save All button and dirty count label in toolbar; auto-save on panel focus loss; Ctrl+S flushes all dirty resources.
 
