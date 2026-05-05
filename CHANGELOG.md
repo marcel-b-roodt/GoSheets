@@ -4,6 +4,18 @@ All notable changes to GoSheets will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Dirty-state indicator — amber tint on rows with unsaved changes; Save All button and dirty count label in toolbar; auto-save on panel focus loss; Ctrl+S flushes all dirty resources.
+
+### Fixed
+- SpinBox typed values now apply correctly before commit (typing a number and clicking away updates the value).
+- `@tool` annotation added to all CellField scripts to fix editor loading failures.
+- NodePath parsing fixed in VectorCellField (was referencing undefined `text` variable).
+- Duplicate `_on_focus_exited` function removed from NumericCellField.
+- Undo version initialised at startup to prevent all resources appearing dirty on first load.
+- Sync timer no longer marks all resources dirty for GoSheets-initiated edits (only for external Inspector changes).
+- Null-safety guard added for CellEditor in ResourceGrid.
+
 ---
 
 ## [0.1.1] — 2026-05-05
