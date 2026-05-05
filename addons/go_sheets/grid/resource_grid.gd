@@ -56,6 +56,9 @@ var _selected_index: int = -1
 var _sort_column: int = -1     # index into visible columns
 var _sort_dir: int = 0          # 1 = asc, -1 = desc
 
+# Dirty-state tracking: set of resource paths with unsaved changes.
+var _dirty_paths: Dictionary = {}   # key: String (path), value: true
+
 # Column resize drag state
 var _drag_col_index: int = -1   # visible-column index being dragged
 var _drag_start_x: float = 0.0  # global mouse x at drag start
@@ -123,7 +126,9 @@ func refresh_resource(resource: Resource) -> void:
 		if _resources[i] == resource:
 			var row: GridRow = _content.get_child(i) as GridRow
 			if row != null and row.visible:
-				row.bind(i, resource, vis, _col_x_offsets, i == _selected_index)
+				var res_path: String = resource.resource_path
+				var is_dirty: bool = res_path != "" and _dirty_paths.has(res_path)
+				row.bind(i, resource, vis, _col_x_offsets, i == _selected_index, is_dirty)
 			return
 
 
@@ -135,7 +140,17 @@ func refresh_all_rows() -> void:
 	for i in _resources.size():
 		var row: GridRow = _content.get_child(i) as GridRow
 		if row != null and row.visible:
-			row.bind(i, _resources[i], vis, _col_x_offsets, i == _selected_index)
+			var res: Resource = _resources[i]
+			var res_path: String = res.resource_path
+			var is_dirty: bool = res_path != "" and _dirty_paths.has(res_path)
+			row.bind(i, res, vis, _col_x_offsets, i == _selected_index, is_dirty)
+
+
+## Set the current set of dirty resource paths for visual indicators.
+func set_dirty_paths(paths: Array) -> void:
+	_dirty_paths.clear()
+	for p: String in paths:
+		_dirty_paths[p] = true
 
 
 # ---------------------------------------------------------------------------
@@ -506,7 +521,12 @@ func _populate_rows() -> void:
 	# Bind and show active rows.
 	for i in _resources.size():
 		var row: GridRow = _content.get_child(i)
-		row.bind(i, _resources[i], vis, _col_x_offsets, i == _selected_index)
+		var res: Resource = _resources[i]
+		var is_dirty: bool = (
+			res.resource_path != ""
+			and _dirty_paths.has(res.resource_path)
+		)
+		row.bind(i, _resources[i], vis, _col_x_offsets, i == _selected_index, is_dirty)
 		row.show()
 
 	# Hide surplus rows (VBoxContainer skips hidden children in layout).

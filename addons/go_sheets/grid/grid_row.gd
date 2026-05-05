@@ -66,12 +66,14 @@ func _ensure_setup() -> void:
 ## [param columns]        — Ordered Array[ColumnDef] of visible columns
 ## [param x_offsets]      — Matching Array[int] of x pixel offsets
 ## [param is_selected]    — Whether to render a selection highlight
+## [param is_dirty]       — Whether the resource has unsaved changes
 func bind(
 	index: int,
 	resource: Resource,
 	columns: Array,
 	x_offsets: Array[int],
-	is_selected: bool
+	is_selected: bool,
+	is_dirty: bool = false
 ) -> void:
 	_index = index
 	_bound_columns  = columns
@@ -135,6 +137,8 @@ func bind(
 	# Row-level background tint
 	if is_selected:
 		_bg.color = Color(0.2, 0.5, 1.0, 0.35)
+	elif is_dirty:
+		_bg.color = Color(1.0, 0.75, 0.3, 0.15)
 	elif index % 2 == 0:
 		_bg.color = Color(1.0, 1.0, 1.0, 0.03)
 	else:

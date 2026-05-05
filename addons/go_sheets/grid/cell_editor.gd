@@ -145,6 +145,7 @@ func open(
 func _apply_popup_size(screen_rect: Rect2i) -> void:
 	# Explicit sizing keeps popup dimensions stable and per-cell.
 	# Width follows the column width exactly (with a tiny floor), while height
+	# Width follows the column width exactly (with a tiny floor), while height
 	# starts at row height and expands to fit the editor content (slider rows, etc.).
 	var popup_w := maxi(screen_rect.size.x, _MIN_WIDTH)
 	var content_h := screen_rect.size.y

@@ -14,16 +14,16 @@ Completed ✅
 
 Remaining Stage 2
 ------------------
-[ ] 2.6  Inline range slider — for PROPERTY_HINT_RANGE fields where the
-         column is wide enough, show a compact HSlider alongside the value.
-         (SpinBox already works; slider is additive.)
-[ ] 2.8  Dirty-state indicator — tint unsaved rows; auto-save on focus loss.
+[x] 2.6  Inline range slider — SpinBox + HSlider (vertically stacked) for
+         PROPERTY_HINT_RANGE fields.
+[x] 2.8  Dirty-state indicator — amber tint on unsaved rows; auto-save on focus
+         loss; Save All button; Ctrl+S; dirty count label in toolbar.
 [x] 2.9  Keyboard navigation — Enter/F2 open edit mode; Tab/Shift+Tab navigate
-          cells; Escape cancels edit.
+         cells; Escape cancels edit.
 [ ] 2.3  Multi-cell edit — select multiple rows (Shift/Ctrl+click) and batch-
-         edit a shared property; single undo action for the whole batch.
+          edit a shared property; single undo action for the whole batch.
 [ ] 2.10 Inline embed (future) — instead of popup, render the edit control
-         directly inside the row at the clicked cell's position.
+          directly inside the row at the clicked cell's position.
 
 Stage 3 — Resource lifecycle
 ------------------------------

@@ -62,6 +62,11 @@ var _undo_redo: EditorUndoRedoManager = null
 var _last_undo_version: int = -1
 ## Timer for polling undo version changes (detects Inspector edits).
 var _sync_timer: Timer = null
+## Resources modified but not yet saved to disk.
+## Key: String (resource.resource_path)  Value: true
+var _dirty_resources: Dictionary = {}
+var _save_btn: Button
+var _dirty_label: Label
 
 
 func _ready() -> void:
@@ -91,6 +96,17 @@ func _ready() -> void:
 	# Restore last selection
 	if _settings.last_selected_type != "":
 		_on_type_selected(_settings.last_selected_type)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_FOCUS_EXIT:
+		_flush_dirty()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_S and (event.ctrl_pressed or event.meta_pressed):
+			_flush_dirty()
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +147,19 @@ func _build_ui() -> void:
 	_debug_toggle.tooltip_text = "Show/hide the debug log pane"
 	_debug_toggle.toggled.connect(_on_debug_toggled)
 	toolbar.add_child(_debug_toggle)
+
+	# Dirty-state indicator and save button
+	_dirty_label = Label.new()
+	_dirty_label.text = ""
+	_dirty_label.tooltip_text = "Number of unsaved resources"
+	toolbar.add_child(_dirty_label)
+
+	_save_btn = Button.new()
+	_save_btn.text = "Save All"
+	_save_btn.tooltip_text = "Save all modified resources to disk (Ctrl+S)"
+	_save_btn.disabled = true
+	_save_btn.pressed.connect(_on_save_all)
+	toolbar.add_child(_save_btn)
 
 	# --- Filter bar ---
 	var filter_bar := HBoxContainer.new()
@@ -247,6 +276,7 @@ func _on_type_selected(type_name: StringName) -> void:
 		_resource_cache[type_name] = _all_resources
 
 	_apply_filter(_filter_text)
+	_sync_dirty_to_grid()
 
 
 ## Stores the new filter text and (re)starts the debounce timer.
@@ -277,8 +307,7 @@ func _on_column_layout_changed() -> void:
 
 ## Called when the user commits an inline cell edit in the grid.
 ## Wraps the change in an EditorUndoRedoManager action so Ctrl+Z works,
-## writes the new value to the resource, saves it to disk, and refreshes
-## the affected row without rebuilding the whole grid.
+## marks the resource as dirty, and refreshes the row.
 func _on_cell_value_changed(
 		resource: Resource,
 		property: StringName,
@@ -294,26 +323,65 @@ func _on_cell_value_changed(
 
 	var label := "Edit %s.%s" % [resource.get_class(), property]
 	_undo_redo.create_action(label, UndoRedo.MERGE_DISABLE)
-	# do: set new value + save
+	# do: set new value + mark dirty + refresh row
 	_undo_redo.add_do_property(resource, property, new_value)
-	_undo_redo.add_do_method(self, "_save_and_refresh_resource", resource)
-	# undo: restore old value + save
+	_undo_redo.add_do_method(self, "_mark_dirty_and_refresh", resource)
+	# undo: restore old value + mark dirty + refresh row
 	_undo_redo.add_undo_property(resource, property, old_value)
-	_undo_redo.add_undo_method(self, "_save_and_refresh_resource", resource)
+	_undo_redo.add_undo_method(self, "_mark_dirty_and_refresh", resource)
 	_undo_redo.commit_action()
 	_dbg("Cell edit: %s.%s  %s → %s" % [resource.get_class(), property, old_value, new_value])
 
 
-## Save [param resource] to disk and refresh its row in the grid.
-## Called as both the do and undo action for cell edits.
-func _save_and_refresh_resource(resource: Resource) -> void:
+## Mark [param resource] as dirty and refresh its row in the grid.
+func _mark_dirty_and_refresh(resource: Resource) -> void:
 	if resource == null:
 		return
 	if resource.resource_path != "":
-		ResourceSaver.save(resource)
+		_dirty_resources[resource.resource_path] = resource
 	_refresh_resource_row(resource)
-	# Keep the Inspector in sync with the (possibly undone) state.
 	EditorInterface.edit_resource(resource)
+	_update_dirty_ui()
+
+
+## Save all dirty resources to disk and clear the dirty state.
+func _on_save_all() -> void:
+	_flush_dirty()
+
+
+func _flush_dirty() -> void:
+	var count := _dirty_resources.size()
+	if count == 0:
+		return
+	for path: String in _dirty_resources:
+		var res: Resource = _dirty_resources[path]
+		if res != null and res.resource_path != "":
+			ResourceSaver.save(res)
+			_dbg("Saved: %s" % path)
+	_dirty_resources.clear()
+	_update_dirty_ui()
+	_dbg("Flushed %d resource(s)" % count)
+
+
+## Update the Save button and dirty label to reflect current dirty state.
+func _update_dirty_ui() -> void:
+	var count := _dirty_resources.size()
+	if _save_btn != null:
+		_save_btn.disabled = count == 0
+	if _dirty_label != null:
+		_dirty_label.text = "" if count == 0 else "(%d unsaved)" % count
+	# Refresh all rows so dirty tint is cleared.
+	if _grid != null:
+		_grid.set_dirty_paths(_dirty_resources.keys())
+		_grid.refresh_all_rows()
+
+
+## Propagate the current dirty set to the grid so rows render with the
+## correct visual state, then refresh all rows.
+func _sync_dirty_to_grid() -> void:
+	if _grid != null:
+		_grid.set_dirty_paths(_dirty_resources.keys())
+		_grid.refresh_all_rows()
 
 
 ## Rebind only the row(s) that display [param resource] without rebuilding
@@ -327,7 +395,8 @@ func _refresh_resource_row(resource: Resource) -> void:
 ## Polls the undo_redo history version every 300 ms.
 ## When the version changes (user pressed Ctrl+Z / Ctrl+Y, or the Inspector
 ## committed a change via its own undo history) we rebind all visible rows
-## so the grid stays in sync with the current resource state on disk.
+## so the grid stays in sync with the current resource state.
+## Also marks resources dirty if the change came from outside GoSheets.
 func _on_sync_timer() -> void:
 	if _undo_redo == null or _grid == null or _column_model == null:
 		return
@@ -339,8 +408,14 @@ func _on_sync_timer() -> void:
 	var v: int = ur.get_version()
 	if v != _last_undo_version:
 		_last_undo_version = v
+		# External undo/redo change: mark all currently loaded resources as
+		# potentially dirty (conservative — we can't tell which one changed).
+		for res: Resource in _all_resources:
+			if res.resource_path != "":
+				_dirty_resources[res.resource_path] = res
 		_grid.refresh_all_rows()
-		_dbg("Undo version changed → grid rows refreshed")
+		_update_dirty_ui()
+		_dbg("Undo version changed → grid rows refreshed, resources marked dirty")
 
 
 func _on_refresh_requested() -> void:
@@ -444,6 +519,7 @@ func _apply_filter(text: String) -> void:
 				filtered.append(res)
 	_dbg("Filter '%s' → %d / %d row(s) shown" % [text, filtered.size(), _all_resources.size()])
 	_grid.load_data(_column_model, filtered)
+	_sync_dirty_to_grid()
 
 
 ## Print [param msg] to the Godot Output panel, prefixed with [GoSheets].

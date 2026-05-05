@@ -1,7 +1,7 @@
 ## NumericCellField
 ##
 ## A SpinBox for editing numeric values. If ColumnDef has PROPERTY_HINT_RANGE,
-## adds a slider above or below the spinbox.
+## adds a slider below the spinbox.
 
 class_name NumericCellField
 extends CellField
@@ -59,7 +59,7 @@ func _build_range_container(col: _COLUMN_DEF_SCRIPT, value: float) -> void:
 	var parts := col.hint_string.split(",", false)
 	var min_val := float(parts[0]) if parts.size() >= 1 else 0.0
 	var max_val := float(parts[1]) if parts.size() >= 2 else 100.0
-	var step := float(parts[2]) if parts.size() >= 3 else 1.0
+	var step    := float(parts[2]) if parts.size() >= 3 else 1.0
 
 	_spinbox = SpinBox.new()
 	_spinbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -97,6 +97,13 @@ func _build_range_container(col: _COLUMN_DEF_SCRIPT, value: float) -> void:
 	_container = vbox
 
 func _on_submitted() -> void:
+	value_changed.emit(get_value())
+
+func _on_focus_exited() -> void:
+	# Only commit if focus left entirely (not moving within container).
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	if focus_owner != null and (focus_owner == self or is_ancestor_of(focus_owner)):
+		return
 	value_changed.emit(get_value())
 
 func _on_focus_exited() -> void:

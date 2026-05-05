@@ -39,12 +39,12 @@ The single source of truth for every feature's status. Updated after each task s
 | 2.3 | Multi-cell batch edit | 📋 Planned |
 | 2.4 | Enum support | ✅ `PROPERTY_HINT_ENUM` editing via `OptionButton` is implemented in the popup editor. |
 | 2.5 | Resource reference picker | ✅ `PROPERTY_HINT_RESOURCE_TYPE` now uses a built-in editor resource picker field in inline cell editing. |
-| 2.6 | Ranged numeric cells | ✅ `PROPERTY_HINT_RANGE` uses spinbox + slider controls with hint-string min/max/step parsing. |
+| 2.6 | Ranged numeric cells | ✅ `PROPERTY_HINT_RANGE` uses SpinBox + HSlider (vertically stacked in popup) with hint-string min/max/step parsing. |
 | 2.7 | Array property cells | ✅ Array and Dictionary cells open a mini editor popup with Apply/Reset. Arrays use path-per-line (typed `Array[Resource]`) or JSON TextEdit (scalar arrays). Dictionaries use a structured key→value row editor with Add/Remove controls; values accept JSON scalars or `res://` paths resolved to Resource objects at commit time. |
 | 2.7a | Array element type inference + typed row editor | ✅ Resource arrays now show a scrollable row list (filename + Browse button + Remove). Browse opens ResourcePickerPopup filtered to the element type. |
 | 2.7c | Resource search/selection panel | ✅ `ResourcePickerPopup` — reads .tres type headers, filters by ClassDB inheritance, live search by filename. Used by array row editor's Browse button and dict value `…` button. |
 | 2.7d | Save nested resource to file | 📋 Planned — from a collection editor, save an inline/unsaved sub-resource out to its own `.tres` file and update the parent reference. |
-| 2.8 | Dirty-state indicator + auto-save option | 📋 Planned |
+| 2.8 | Dirty-state indicator + auto-save option | ✅ Amber tint on unsaved rows; Save All button in toolbar with dirty count label; auto-save on panel focus loss; Ctrl+S flushes all dirty resources. |
 | 2.9 | Keyboard navigation | ✅ Enter/F2 open cell; Tab/Shift+Tab navigate editable columns (skipping collapsed), wrap across rows, and cycle at grid boundaries; Escape cancels. |
 
 ## Stage 3 — Resource Lifecycle
