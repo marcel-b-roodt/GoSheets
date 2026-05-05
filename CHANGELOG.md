@@ -4,6 +4,10 @@ All notable changes to GoSheets will be documented in this file.
 
 ## [Unreleased]
 
+---
+
+## [0.1.1] — 2026-05-05
+
 ### Added
 - Inline editing for all struct/vector types — `VectorCellField` displays and edits Vector2, Vector2i, Vector3, Vector3i, Vector4, Vector4i, Rect2, Rect2i, Transform2D, Transform3D, Basis, Quaternion, AABB, Plane, and NodePath using comma-separated input.
 - Project README, LICENSE, GUIDE, and public documentation pages.
