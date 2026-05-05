@@ -1,3 +1,4 @@
+@tool
 ## ColorCellField
 ##
 ## A ColorPickerButton for editing color values.

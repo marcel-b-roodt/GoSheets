@@ -569,8 +569,9 @@ func _open_editor_at(row_index: int, col_index: int) -> void:
 		col.width,
 		ROW_HEIGHT
 	)
-	_cell_editor.debug_mode = debug_mode
-	_cell_editor.open(resource, col, cell_rect)
+	if _cell_editor != null:
+		_cell_editor.debug_mode = debug_mode
+		_cell_editor.open(resource, col, cell_rect)
 
 
 func _on_row_clicked(row_index: int) -> void:

@@ -308,15 +308,18 @@ func test_resource_reference_picker_emits_committed_resource() -> void:
 		committed_new = n)
 
 	var owner := ResourceOwner.new()
-	var col := ColumnDef.new(&"spell_ref", TYPE_OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "SpellMetadata")
+	var col := ColumnDef.new(
+		&"spell_ref", TYPE_OBJECT,
+		PROPERTY_HINT_RESOURCE_TYPE, "TestSpellMetadata"
+	)
 	editor.open(owner, col, Rect2i(100, 100, 220, 24))
 	await await_signal_on(editor, "visibility_changed")
 
-	var picked := SpellMetadata.new()
+	var picked := TestSpellMetadata.new()
 	editor._inner.value_changed.emit(picked)
 
 	assert_bool(committed).is_true()
-	assert_bool(committed_new is SpellMetadata).is_true()
+	assert_bool(committed_new is TestSpellMetadata).is_true()
 	assert_bool(editor.visible).is_false()
 
 	remove_child(editor)
@@ -391,7 +394,10 @@ func test_resource_array_collection_apply_emits_resources_not_strings() -> void:
 		committed_new = n)
 
 	var owner := CollectionOwner.new()
-	var col := ColumnDef.new(&"spell_refs", TYPE_ARRAY, PROPERTY_HINT_ARRAY_TYPE, "SpellMetadata")
+	var col := ColumnDef.new(
+		&"spell_refs", TYPE_ARRAY,
+		PROPERTY_HINT_ARRAY_TYPE, "TestSpellMetadata"
+	)
 	editor.open(owner, col, Rect2i(100, 100, 280, 24))
 	await await_signal_on(editor, "visibility_changed")
 
@@ -421,18 +427,18 @@ class DummyResource extends Resource:
 	var speed: int = 42
 
 
-class SpellMetadata extends Resource:
+class TestSpellMetadata extends Resource:
 	var id: String = ""
 
 
 class ResourceOwner extends Resource:
-	var spell_ref: SpellMetadata = null
+	var spell_ref: TestSpellMetadata = null
 
 
 class CollectionOwner extends Resource:
 	var values: Array = []
 	var mapping: Dictionary = {}
-	var spell_refs: Array[SpellMetadata] = []
+	var spell_refs: Array[TestSpellMetadata] = []
 
 
 func _make_dummy_resource() -> Resource:

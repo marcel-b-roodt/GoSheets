@@ -1,3 +1,4 @@
+@tool
 ## NumericCellField
 ##
 ## A SpinBox for editing numeric values. If ColumnDef has PROPERTY_HINT_RANGE,
@@ -37,6 +38,7 @@ func set_value(value: Variant) -> void:
 	_spinbox.value = float(value) if value != null else 0.0
 
 func get_value() -> Variant:
+	_spinbox.apply()
 	var raw := _spinbox.value
 	return int(raw) if _is_int else raw
 
@@ -97,13 +99,6 @@ func _build_range_container(col: _COLUMN_DEF_SCRIPT, value: float) -> void:
 	_container = vbox
 
 func _on_submitted() -> void:
-	value_changed.emit(get_value())
-
-func _on_focus_exited() -> void:
-	# Only commit if focus left entirely (not moving within container).
-	var focus_owner := get_viewport().gui_get_focus_owner()
-	if focus_owner != null and (focus_owner == self or is_ancestor_of(focus_owner)):
-		return
 	value_changed.emit(get_value())
 
 func _on_focus_exited() -> void:

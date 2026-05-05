@@ -1,3 +1,4 @@
+@tool
 ## VectorCellField
 ##
 ## A LineEdit-based editor for vector and struct types that can be expressed
@@ -121,6 +122,9 @@ static func _format_for_edit(value: Variant) -> String:
 
 func _parse_from_edit(text: String) -> Variant:
 	var raw: String = text.strip_edges().trim_prefix("(").trim_suffix(")")
+	if _type == TYPE_NODE_PATH:
+		var s := raw
+		return NodePath(s) if s != "" else NodePath("")
 	var parts: PackedStringArray = raw.split(",", false)
 	var floats: Array[float] = []
 	for part in parts:
@@ -183,9 +187,6 @@ func _build_from_floats(f: Array[float]) -> Variant:
 		TYPE_PLANE:
 			if f.size() >= 4:
 				result = Plane(Vector3(f[0], f[1], f[2]), f[3])
-		TYPE_NODE_PATH:
-			var s := text.strip_edges()
-			result = NodePath(s) if s != "" else NodePath("")
 	return result
 
 

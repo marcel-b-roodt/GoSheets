@@ -1,3 +1,4 @@
+@tool
 ## StringCellField
 ##
 ## A LineEdit for editing string values.

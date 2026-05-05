@@ -1,3 +1,4 @@
+@tool
 ## CellField
 ##
 ## Base class for individual cell editor controls.

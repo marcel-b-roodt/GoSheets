@@ -17,7 +17,35 @@ Remaining Stage 2
 [x] 2.6  Inline range slider — SpinBox + HSlider (vertically stacked) for
          PROPERTY_HINT_RANGE fields.
 [x] 2.8  Dirty-state indicator — amber tint on unsaved rows; auto-save on focus
-         loss; Save All button; Ctrl+S; dirty count label in toolbar.
+          loss; Save All button; Ctrl+S; dirty count label in toolbar.
+
+     2.8 Test checklist (manual, in-editor)
+     --------------------------------------
+     [ ] Edit a cell (e.g. change a string or int value) — row should show
+         amber tint immediately after commit.
+     [ ] Dirty count label in toolbar should read "(1 unsaved)" after first
+         edit, increment with each additional resource edited.
+     [ ] Save All button should be enabled while dirty resources exist.
+     [ ] Click Save All — amber tint should disappear, dirty count should
+         clear to "", button should disable. Verify the .tres file on disk
+         has the new value (close/reopen project or check file).
+     [ ] Press Ctrl+S — should flush all dirty resources. Same visual
+         result as Save All button.
+     [ ] Click away from the Resources tab (e.g. switch to 2D or 3D) —
+         should auto-save all dirty resources. Switch back and confirm no
+         amber tint, no unsaved count.
+     [ ] Undo a cell edit (Ctrl+Z) — the undone resource should still be
+         marked dirty (value changed from what is on disk) and show amber
+         tint. Undo back to original value — still dirty (conservative).
+         Save All should clear it.
+     [ ] Edit multiple different resources — each should get its own amber
+         tint. Save All should clear all at once.
+     [ ] Edit a resource, then switch the type selector to a different
+         resource class — return to the original type. The dirty state and
+         amber tint should persist for the previously edited resource.
+     [ ] Edit a resource via the Inspector panel (not through GoSheets) —
+         after the 300ms sync detects the change, that resource should be
+         marked dirty with amber tint.
 [x] 2.9  Keyboard navigation — Enter/F2 open edit mode; Tab/Shift+Tab navigate
          cells; Escape cancels edit.
 [ ] 2.3  Multi-cell edit — select multiple rows (Shift/Ctrl+click) and batch-

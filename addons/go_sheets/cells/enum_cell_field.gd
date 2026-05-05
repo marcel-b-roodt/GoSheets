@@ -1,3 +1,4 @@
+@tool
 ## EnumCellField
 ##
 ## An OptionButton for editing enum values (int properties with PROPERTY_HINT_ENUM).

@@ -1,6 +1,8 @@
-[gd_resource type="Resource" script_class="SpellMetadata" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SpellMetadata" format=3 uid="uid://mj4lt23fwwc8"]
 
-[ext_resource type="Script" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
+[ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
+[ext_resource type="Resource" uid="uid://cry0wmc1nxrg5" path="res://test_scenes/data/spell_effects/restore_health.tres" id="2_kh5rq"]
+[ext_resource type="Resource" uid="uid://i2thvln50awe" path="res://test_scenes/data/spell_effects/paralyze.tres" id="3_mebhq"]
 
 [resource]
 script = ExtResource("1")
@@ -9,4 +11,4 @@ description = "Raise a thick wall of stone from the ground to block movement and
 mana_cost = 35
 cooldown = 8.0
 element = 3
-is_unlocked = true
+spell_effects = Array[Resource]([ExtResource("2_kh5rq"), ExtResource("3_mebhq")])

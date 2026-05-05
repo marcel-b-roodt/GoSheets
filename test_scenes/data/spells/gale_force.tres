@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
 [ext_resource type="Resource" uid="uid://i2thvln50awe" path="res://test_scenes/data/spell_effects/paralyze.tres" id="2_8eld8"]
+[ext_resource type="Script" uid="uid://c47qmf75qs0cp" path="res://test_scenes/resources/spell_effect.gd" id="2_pw0ix"]
 
 [resource]
 script = ExtResource("1")
@@ -10,4 +11,4 @@ description = "Summon a powerful burst of wind that knocks back all nearby enemi
 mana_cost = 15
 cooldown = 4.0
 element = 4
-spell_effects = Array[Resource]([ExtResource("2_8eld8")])
+spell_effects = Array[ExtResource("2_pw0ix")]([ExtResource("2_8eld8")])

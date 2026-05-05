@@ -85,6 +85,11 @@ func _ready() -> void:
 	efs.filesystem_changed.connect(_on_filesystem_changed)
 	# Grab undo/redo manager once.
 	_undo_redo = EditorInterface.get_editor_undo_redo()
+	# Initialise undo version so the first sync tick doesn't mark all resources dirty.
+	if _undo_redo != null:
+		var ur: UndoRedo = _undo_redo.get_history_undo_redo(0)
+		if ur != null:
+			_last_undo_version = ur.get_version()
 	# Poll timer: detect undo/redo or Inspector changes every 300 ms.
 	_sync_timer = Timer.new()
 	_sync_timer.wait_time = 0.3
@@ -330,6 +335,9 @@ func _on_cell_value_changed(
 	_undo_redo.add_undo_property(resource, property, old_value)
 	_undo_redo.add_undo_method(self, "_mark_dirty_and_refresh", resource)
 	_undo_redo.commit_action()
+	# Bump the undo version so the sync timer doesn't treat our own edit
+	# as an external change that marks all resources dirty.
+	_sync_undo_version()
 	_dbg("Cell edit: %s.%s  %s → %s" % [resource.get_class(), property, old_value, new_value])
 
 
@@ -390,6 +398,17 @@ func _refresh_resource_row(resource: Resource) -> void:
 	if _grid == null or _column_model == null:
 		return
 	_grid.refresh_resource(resource)
+
+
+## Update _last_undo_version to match the current global undo version.
+## Called after GoSheets-initiated edits so the sync timer doesn't
+## treat our own commits as external changes.
+func _sync_undo_version() -> void:
+	if _undo_redo == null:
+		return
+	var ur: UndoRedo = _undo_redo.get_history_undo_redo(0)
+	if ur != null:
+		_last_undo_version = ur.get_version()
 
 
 ## Polls the undo_redo history version every 300 ms.

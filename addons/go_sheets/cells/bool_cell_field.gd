@@ -1,3 +1,4 @@
+@tool
 ## BoolCellField
 ##
 ## A CheckBox for editing boolean values.

@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="SpellMetadata" format=3 uid="uid://b2tvp0k5f0ac3"]
 
 [ext_resource type="Script" uid="uid://dajwmtwycebnd" path="res://test_scenes/resources/spell_metadata.gd" id="1"]
+[ext_resource type="Script" uid="uid://c47qmf75qs0cp" path="res://test_scenes/resources/spell_effect.gd" id="2_1j8at"]
 
 [resource]
 script = ExtResource("1")
